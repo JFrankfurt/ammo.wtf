@@ -90,8 +90,8 @@ const Home: FC = () => {
           <p className="mt-4 text-lg max-w-xl mx-auto">
             At ammo.wtf, we empower you to build your ammunition stockpile
             according to your needs. Select from a range of popular calibers and
-            allocate your budget with full control. We'll handle the storage and
-            delivery, ensuring your ammo is ready when you are.
+            allocate your budget with full control. We&apos;ll handle the
+            storage and delivery, ensuring your ammo is ready when you are.
           </p>
           <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             <div className="bg-gray-200 p-6 rounded-lg shadow-lg border-2 border-electric-blue">
