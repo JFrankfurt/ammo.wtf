@@ -1,4 +1,5 @@
 import landingImage from "@/assets/landing-img.webp";
+import LoginButton from "@/src/components/LoginButton";
 import { Button } from "@headlessui/react";
 import { FC } from "react";
 
@@ -14,7 +15,7 @@ const Home: FC = () => {
             </a>
           </div>
           <div>
-            <Button className="mt-2 md:mt-0">Login</Button>
+            <LoginButton />
           </div>
         </div>
       </nav>

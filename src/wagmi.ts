@@ -1,13 +1,12 @@
-import { http, createConfig } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
+import { createConfig, http } from "wagmi";
+import { base, baseSepolia } from "wagmi/chains";
 import { coinbaseWallet } from "wagmi/connectors";
 
 export const config = createConfig({
-  chains: [baseSepolia],
-  connectors: [
-    coinbaseWallet({ appName: "Create Wagmi", preference: "smartWalletOnly" }),
-  ],
+  chains: [base, baseSepolia],
+  connectors: [coinbaseWallet({ appName: "onchainkit" })],
   transports: {
+    [base.id]: http(),
     [baseSepolia.id]: http(),
   },
 });
