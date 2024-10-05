@@ -36,7 +36,7 @@ export default function Dashboard() {
         </div>
         <div>
           <div className="text-gray-300 py-3 border-t font-semibold border-slate-700 text-sm bg-slate-600 px-3 items-center justify-between flex">
-            <div className="flex-1">Token</div>
+            <div className="flex-1">Asset</div>
             <div className="flex-1 text-right">Price</div>
             <div className="flex-1 text-right">Balance</div>
             <div className="flex-1 text-right">Value</div>
