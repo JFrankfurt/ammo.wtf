@@ -12,10 +12,10 @@ export default function Layout(props: PropsWithChildren<{}>) {
             home
           </Link>
           <AdminLink />
-          <Link href="/ship-ammo" className="hover:text-gray-300">
+          <Link href="/dashboard/ship-ammo" className="hover:text-gray-300">
             ship ammo
           </Link>
-          <Link href="/settings" className="hover:text-gray-300">
+          <Link href="/dashboard/settings" className="hover:text-gray-300">
             settings
           </Link>
           <LogoutButton />
