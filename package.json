@@ -1,5 +1,6 @@
 {
   "name": "ammo.wtf",
+  "license": "GPL-3.0",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,8 +17,8 @@
     "@react-three/fiber": "^8.17.10",
     "@react-three/rapier": "^1.5.0",
     "cannon-es": "^0.20.0",
-    "next": "^14.2.14",
-    "react": "^19.0.0",
+    "next": "^14",
+    "react": "^18",
     "react-dom": "^18",
     "three": "^0.171.0",
     "wagmi": "^2.12.16"
