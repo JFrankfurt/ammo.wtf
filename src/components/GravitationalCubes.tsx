@@ -23,12 +23,39 @@ interface SpawnedObject {
 }
 
 function CenterSphere() {
+  const shaderMaterial = React.useMemo(() => {
+    return new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+
+        void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        uniform float time;
+
+        void main() {
+            gl_FragColor = vec4(vNormal, 1.0);
+        }
+      `,
+      uniforms: {
+        // color: { value: new THREE.Color("#C94A3D") }, // Base color
+        time: { value: 0 }, // Dynamic time uniform
+      },
+      transparent: false, // No transparency for this shader
+      side: THREE.DoubleSide, // Render both sides of the sphere
+    });
+  }, []);
   return (
     <RigidBody type="fixed" colliders="ball">
       <Text>wtf</Text>
-      <mesh>
+      <mesh material={shaderMaterial}>
         <sphereGeometry args={[CENTER_RADIUS, 32, 32]} />
-        <meshPhongMaterial color="#C94A3D" />
       </mesh>
     </RigidBody>
   );
@@ -120,8 +147,8 @@ function Scene() {
       );
 
       const position = new THREE.Vector3(
-        mouse.x * 15,
-        mouse.y * 15,
+        mouse.x + (Math.random() * 2.0 - 1.0) * 15,
+        mouse.y + (Math.random() * 2.0 - 1.0) * 15,
         Math.random() * 15 - 7.5
       );
 
