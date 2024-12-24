@@ -209,7 +209,13 @@ function Scene() {
 
 export default function GravityObjects() {
   return (
-    <div className="fixed inset-0 w-full h-full overflow-hidden bg-kumoGray animate-bgCycle">
+    <div
+      className="fixed inset-0 w-full h-full overflow-hidden bg-kumoGray animate-bgCycle"
+      style={{
+        animation: "bgCycle 30s linear infinite",
+        background: `radial-gradient(circle at center, var(--color1), var(--color2), var(--color3), var(--color4))`,
+      }}
+    >
       <Canvas>
         <Physics gravity={[0, 0, 0]}>
           <Scene />
