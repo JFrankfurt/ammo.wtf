@@ -9,46 +9,42 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      colors: {
-        // Neutral Base
-        kumoGray: "#D9D9D9",
-        shiroWhite: "#F9F8F6",
-        washiBeige: "#E7E2D1",
-
-        // Earthy Tones
-        hinokiWood: "#B59B7C",
-        kansoClay: "#C97D61",
-        ashiStone: "#A3A3A2",
-
-        // Organic Accents
-        matchaGreen: "#8CA38F",
-        koiOrange: "#DB8C5C",
-        wabiSabiOlive: "#857F72",
-
-        // Dark Contrasts
-        sumiBlack: "#373532",
-        kuroganeSteel: "#555555",
-
-        // Red for Vitality
-        akaneRed: "#C94A3D",
-      },
       keyframes: {
         bgCycle: {
-          "0%": { backgroundColor: "#D9D9D9" }, // kumoGray
-          "20%": { backgroundColor: "#E7E2D1" }, // washiBeige
-          "40%": { backgroundColor: "#B59B7C" }, // hinokiWood
-          "60%": { backgroundColor: "#8CA38F" }, // matchaGreen
-          "80%": { backgroundColor: "#DB8C5C" }, // koiOrange
-          "100%": { backgroundColor: "#D9D9D9" }, // loop back to kumoGray
+          "0%": {
+            "--color1": "red",
+            "--color2": "green",
+            "--color3": "blue",
+            "--color4": "cyan",
+          },
+          "25%": {
+            "--color1": "green",
+            "--color2": "blue",
+            "--color3": "cyan",
+            "--color4": "magenta",
+          },
+          "50%": {
+            "--color1": "blue",
+            "--color2": "cyan",
+            "--color3": "magenta",
+            "--color4": "yellow",
+          },
+          "75%": {
+            "--color1": "cyan",
+            "--color2": "magenta",
+            "--color3": "yellow",
+            "--color4": "black",
+          },
+          "100%": {
+            "--color1": "red",
+            "--color2": "green",
+            "--color3": "blue",
+            "--color4": "cyan",
+          },
         },
       },
       animation: {
-        bgCycle: "bgCycle 60s ease-in-out infinite",
-      },
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+        bgCycle: "bgCycle 30s linear infinite",
       },
     },
   },
