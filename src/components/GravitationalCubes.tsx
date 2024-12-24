@@ -38,6 +38,40 @@ const ImportedModel = React.forwardRef<RapierRigidBody, RigidBodyProps>(
   (props, ref) => {
     const { scene } = useGLTF("/5.56_lowpoly.glb");
     const clonedScene = React.useMemo(() => scene.clone(true), [scene]);
+
+    const customMaterial = React.useMemo(() => {
+      return new THREE.ShaderMaterial({
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+
+          void main() {
+              vNormal = normalize(normalMatrix * normal);
+              vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vNormal;
+
+          void main() {
+              gl_FragColor = vec4(vNormal, 1.0);
+          }
+        `,
+        // transparent: true, // Enable transparency
+        // blending: THREE.AdditiveBlending, // Use additive blending
+        // side: THREE.DoubleSide, // Render both sides
+      });
+    }, []);
+
+    React.useEffect(() => {
+      clonedScene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          (child as THREE.Mesh).material = customMaterial;
+        }
+      });
+    }, [clonedScene, customMaterial]);
+
     return (
       <RigidBody ref={ref} colliders="hull" {...props}>
         <primitive
