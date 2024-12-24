@@ -57,10 +57,7 @@ const ImportedModel = React.forwardRef<RapierRigidBody, RigidBodyProps>(
           void main() {
               gl_FragColor = vec4(vNormal, 1.0);
           }
-        `,
-        // transparent: true, // Enable transparency
-        // blending: THREE.AdditiveBlending, // Use additive blending
-        // side: THREE.DoubleSide, // Render both sides
+        `
       });
     }, []);
 
