@@ -84,7 +84,7 @@ const ImportedModel = React.forwardRef<RapierRigidBody, RigidBodyProps>(
           void main() {
               gl_FragColor = vec4(vNormal, 1.0);
           }
-        `
+        `,
       });
     }, []);
 
@@ -108,9 +108,19 @@ const ImportedModel = React.forwardRef<RapierRigidBody, RigidBodyProps>(
 );
 ImportedModel.displayName = "ImportedModel";
 
+const initialObjectPosition = new THREE.Vector3(
+  (Math.random() * 2.0 - 1.0) * 15,
+  (Math.random() * 2.0 - 1.0) * 15,
+  Math.random() * 15 - 7.5
+);
+const initialObject = {
+  ref: React.createRef<RapierRigidBody>(),
+  position: initialObjectPosition,
+};
+
 function Scene() {
   const { camera, size } = useThree();
-  const [objects, setObjects] = useState<SpawnedObject[]>([]);
+  const [objects, setObjects] = useState<SpawnedObject[]>([initialObject]);
 
   const center = new THREE.Vector3(0, 0, 0);
 
