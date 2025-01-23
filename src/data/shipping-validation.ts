@@ -1,6 +1,3 @@
-import { Buffer } from "buffer";
-import type { Address } from "viem";
-import { encodeAbiParameters, parseAbiParameters } from "wagmi";
 import { z } from "zod";
 
 // Base schemas for reusable components
@@ -66,43 +63,9 @@ const shippingSchema = z.object({
 
 type ShippingData = z.infer<typeof shippingSchema>;
 
-// Function to encrypt sensitive data using a public key
-const encryptShippingData = async (
-  data: ShippingData,
-  recipientPublicKey: string
-): Promise<`0x${string}`> => {
-  try {
-    // Validate data against schema
-    const validatedData = shippingSchema.parse(data);
-
-    // Convert to JSON
-    const jsonStr = JSON.stringify(validatedData);
-
-    // Encrypt using recipient's public key
-    const encryptedData = await window.ethereum.request({
-      method: "eth_encrypt",
-      params: [jsonStr, recipientPublicKey],
-    });
-
-    // Encode as bytes
-    return encodeAbiParameters(parseAbiParameters("bytes"), [
-      Buffer.from(encryptedData),
-    ]);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      // Handle validation errors
-      const formattedError = error.errors.map((err) => ({
-        path: err.path.join("."),
-        message: err.message,
-      }));
-      throw new Error(`Validation failed: ${JSON.stringify(formattedError)}`);
-    }
-    throw error;
-  }
-};
 
 // Example usage
-const exampleShippingData: ShippingData = {
+export const exampleShippingData: ShippingData = {
   orderId: "0xasdfasdftransactionhash",
   recipient: {
     name: "John Doe",
@@ -127,29 +90,4 @@ const exampleShippingData: ShippingData = {
     timestamp: Date.now(),
     origin: "marketplace-v2",
   },
-};
-
-const decryptShippingData = async (
-  encryptedData: `0x${string}`,
-  account: Address
-): Promise<ShippingData> => {
-  try {
-    // Decode the bytes
-    const decoded = Buffer.from(
-      encryptedData.slice(2), // remove 0x prefix
-      "hex"
-    ).toString();
-
-    // Decrypt using account
-    const decryptedStr = await window.ethereum.request({
-      method: "eth_decrypt",
-      params: [decoded, account],
-    });
-
-    // Parse and validate against schema
-    const data = JSON.parse(decryptedStr);
-    return shippingSchema.parse(data);
-  } catch (error) {
-    throw new Error(`Failed to decrypt shipping data: ${error.message}`);
-  }
 };
