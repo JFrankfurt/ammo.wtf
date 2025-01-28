@@ -149,7 +149,7 @@ async function decryptData(
   /**
    * Full Example Flow
    */
-  function example() {
+  async function example() {
     const shippingData = JSON.stringify(exampleShippingData);
   
     // Generate example ECC key pair for the shipper - this public key will probably be hardcoded into the app

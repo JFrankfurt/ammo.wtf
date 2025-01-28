@@ -1,11 +1,11 @@
 import GravitationalCubes from "@/src/components/GravitationalCubes";
-import TerminalInput from "@/src/components/Terminal";
 import { FC } from "react";
+import ConnectedAccountTokenInfo from "@/src/components/ConnectedAccountTokenInfo";
 
 const Home: FC = () => {
   return (
     <div className="relative">
-      <TerminalInput />
+      <ConnectedAccountTokenInfo />
       <GravitationalCubes />
     </div>
   );

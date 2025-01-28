@@ -5,6 +5,7 @@ import { coinbaseWallet } from "wagmi/connectors";
 export const config = createConfig({
   chains: [base, baseSepolia],
   connectors: [coinbaseWallet({ appName: "onchainkit" })],
+  ssr: true,
   transports: {
     [base.id]: http(),
     [baseSepolia.id]: http(),

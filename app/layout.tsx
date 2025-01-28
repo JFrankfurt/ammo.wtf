@@ -1,8 +1,10 @@
+import "@coinbase/onchainkit/styles.css";
+import { Providers } from "@/src/providers";
 import "../styles/globals.css";
 
 export const metadata = {
   title: "ammo.wtf",
-  description: "stack your bags (with ammo)",
+  description: "stack your bags with ammo",
 };
 
 export default function RootLayout({
@@ -12,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

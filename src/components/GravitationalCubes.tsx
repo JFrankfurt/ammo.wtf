@@ -162,11 +162,15 @@ function Scene() {
         Math.random() * 15 - 7.5
       );
 
-      // Create a new RigidBody reference so we can track it
       const ref = React.createRef<RapierRigidBody>();
-      setObjects((prev) => [...prev, { ref, position }]);
+      setObjects((prev) => {
+        if (prev.length >= 50) {
+          return [...prev.slice(1), { ref, position }];
+        }
+        return [...prev, { ref, position }];
+      });
     },
-    [size]
+    [size.height, size.width]
   );
 
   React.useEffect(() => {
@@ -219,7 +223,7 @@ function Scene() {
 
 export default function GravityObjects() {
   return (
-    <div className="fixed inset-0 w-full h-full overflow-hidden bg-kumoGray animate-bgCycle">
+    <div className="fixed -z-10 inset-0 w-full h-full overflow-hidden bg-kumoGray animate-bgCycle">
       <Canvas>
         <Physics gravity={[0, 0, 0]}>
           <Scene />
