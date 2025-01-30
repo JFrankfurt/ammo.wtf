@@ -11,10 +11,9 @@ import {
 import React, { useCallback, useState } from "react";
 import * as THREE from "three";
 
-// Customize these constants as needed
 const CENTER_RADIUS = 1;
 const GRAVITY_STRENGTH = 4;
-const MODEL_SCALE = 1; // Adjust to fit your model size
+const MODEL_SCALE = 1;
 const INITIAL_LINEAR_VELOCITY_MAG = 3;
 
 interface SpawnedObject {
@@ -45,16 +44,14 @@ function CenterSphere() {
         }
       `,
       uniforms: {
-        // color: { value: new THREE.Color("#C94A3D") }, // Base color
-        time: { value: 0 }, // Dynamic time uniform
+        time: { value: 0 },
       },
-      transparent: false, // No transparency for this shader
-      side: THREE.DoubleSide, // Render both sides of the sphere
+      transparent: false,
+      side: THREE.FrontSide,
     });
   }, []);
   return (
     <RigidBody type="fixed" colliders="ball">
-      <Text>wtf</Text>
       <mesh material={shaderMaterial}>
         <sphereGeometry args={[CENTER_RADIUS, 32, 32]} />
       </mesh>
@@ -169,7 +166,7 @@ function Scene() {
       );
       const ref = React.createRef<RapierRigidBody>();
       setObjects((prev) => {
-        if (prev.length <= 50) {
+        if (prev.length <= 200) {
           return [...prev, { ref, position, rotation }];
         }
         return prev;
@@ -232,7 +229,7 @@ function Scene() {
 export default function GravityObjects() {
   return (
     <div className="fixed -z-10 inset-0 w-full h-full overflow-hidden bg-kumoGray animate-bgCycle">
-      <Canvas>
+      <Canvas frameloop="demand" performance={{ min: 0.5 }} dpr={[1, 2]}>
         <Physics gravity={[0, 0, 0]}>
           <Scene />
         </Physics>

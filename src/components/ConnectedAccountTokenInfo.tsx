@@ -1,23 +1,11 @@
 "use client";
 
-import {
-  Button,
-  Description,
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-} from "@headlessui/react";
+import { Button, Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { v4 as uuidv4 } from "uuid";
-import {
-  useAccount,
-  useConnect,
-  useConnectors,
-  useDisconnect,
-  useReadContract,
-} from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { z } from "zod";
 import erc20Abi from "../abi/erc20";
 import {
@@ -27,24 +15,25 @@ import {
 } from "../data/shipping-encryption";
 import { shippingSchema } from "../data/shipping-validation";
 
-interface Token {
+export interface Token {
   address: `0x${string}`;
   symbol: string;
+  priceUsd: number;
 }
 
-const tokens: Token[] = [
+export const tokens: Token[] = [
   {
     address: "0x0000000000000000000000000000000000000000",
     symbol: "5.56",
+    priceUsd: 0.75,
   },
 ];
 
-const TokenBalanceInfo = ({
+export const TokenBalanceInfo = ({
   address,
   symbol,
   accountAddress,
 }: Token & { accountAddress: `0x${string}` }) => {
-  const [isShippingOpen, setIsShippingOpen] = useState(false);
   const { data: balance } = useReadContract({
     address,
     abi: erc20Abi,
@@ -52,39 +41,26 @@ const TokenBalanceInfo = ({
     args: [accountAddress],
   });
 
-  const canShip = balance && balance >= BigInt(250);
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-row justify-between">
       <div className="text-lg">
         {symbol}: {balance?.toString() || "none"}
       </div>
-      {!canShip && (
-        <Button onClick={() => setIsShippingOpen(true)}>Ship Tokens</Button>
-      )}
-      <ShippingForm
-        isOpen={isShippingOpen}
-        onClose={() => setIsShippingOpen(false)}
-        address={accountAddress}
-        balance={balance}
-      />
     </div>
   );
 };
 
-const ShippingForm = ({
+export const ShippingForm = ({
   isOpen,
   onClose,
   address,
-  balance,
 }: {
   isOpen: boolean;
   onClose: () => void;
   address: `0x${string}`;
-  balance: bigint | undefined;
 }) => {
-  const [step, setStep] = useState<"quantity" | "shipping">("quantity");
-  const [quantity, setQuantity] = useState<number>(0);
+  const [step, setStep] = useState<"contents" | "shipping">("contents");
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -122,14 +98,33 @@ const ShippingForm = ({
     },
   });
 
-  const maxShippableUnits = balance ? Number(balance) / 250 : 0;
+  const { data: balance556 } = useReadContract({
+    address: tokens[0].address,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [address],
+  });
 
-  const handleQuantitySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (quantity > 0 && quantity <= maxShippableUnits) {
-      setStep("shipping");
-    }
+  const balances = [{ token: tokens[0], balance: balance556 || BigInt(0) }];
+
+  const handleQuantityChange = (address: string, value: number) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [address]: value,
+    }));
   };
+
+  const totalValue = Object.entries(quantities).reduce(
+    (sum, [address, qty]) => {
+      const token = tokens.find((t) => t.address === address);
+      return sum + (token?.priceUsd || 0) * qty * 250;
+    },
+    0
+  );
+
+  const hasSelectedQuantities = Object.values(quantities).some(
+    (qty) => qty > 0
+  );
 
   const onSubmit = async (data: z.infer<typeof shippingSchema>) => {
     try {
@@ -144,7 +139,7 @@ const ShippingForm = ({
           timestamp: Date.now(),
           origin: "marketplace-v2",
         },
-        quantity: quantity * 250, // Include quantity in shipping data
+        quantity: totalValue,
       };
 
       // Generate example ECC key pair for the shipper
@@ -173,8 +168,8 @@ const ShippingForm = ({
       });
 
       reset();
-      setQuantity(0);
-      setStep("quantity");
+      setQuantities({});
+      setStep("contents");
       onClose();
     } catch (error) {
       console.error("Error submitting shipping form:", error);
@@ -187,32 +182,74 @@ const ShippingForm = ({
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
-        <DialogPanel className="max-w-lg space-y-4 border bg-white p-12">
+        <DialogPanel className="max-w-4xl space-y-4 border bg-white p-12">
           <DialogTitle className="font-bold">Ship Tokens</DialogTitle>
 
-          {step === "quantity" ? (
-            <form onSubmit={handleQuantitySubmit} className="space-y-4">
-              <Description className="text-center text-xl">
-                Select number of 250-cartridge bags to ship. (Maximum:{" "}
-                {Math.floor(maxShippableUnits)})
-              </Description>
-              <input
-                type="number"
-                min="1"
-                max={Math.floor(maxShippableUnits)}
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                className="w-full border p-2"
-                placeholder="Number of 250-token bags"
-              />
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={!quantity || quantity > maxShippableUnits}
-              >
-                Next
-              </Button>
-            </form>
+          {step === "contents" ? (
+            <div className="space-y-4">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Ammo Type</th>
+                    <th className="text-right p-2">Available</th>
+                    <th className="text-right p-2">Quantity</th>
+                    <th className="text-right p-2">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {balances.map(({ token, balance }) => {
+                    const maxUnits = Number(balance) / 250;
+                    const quantity = quantities[token.address] || 0;
+                    const value = quantity * 250 * token.priceUsd;
+
+                    return (
+                      <tr key={token.address} className="border-b">
+                        <td className="p-2">{token.symbol}</td>
+                        <td className="text-right p-2">{balance.toString()}</td>
+                        <td className="text-right p-2">
+                          <select
+                            className="border p-1"
+                            value={quantity}
+                            onChange={(e) =>
+                              handleQuantityChange(
+                                token.address,
+                                Number(e.target.value)
+                              )
+                            }
+                          >
+                            <option value={0}>0</option>
+                            {Array.from(
+                              { length: Math.floor(maxUnits) },
+                              (_, i) => (
+                                <option key={i + 1} value={i + 1}>
+                                  {i + 1}
+                                </option>
+                              )
+                            )}
+                          </select>
+                        </td>
+                        <td className="text-right p-2">${value.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="font-bold">
+                    <td colSpan={3} className="text-right p-2">
+                      Total Value:
+                    </td>
+                    <td className="text-right p-2">${totalValue.toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  onClick={() => setStep("shipping")}
+                  disabled={!hasSelectedQuantities}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
@@ -301,11 +338,7 @@ const ShippingForm = ({
                     {...register("address.country")}
                     className="w-full border p-2"
                   >
-                    <option value="">Select Country</option>
                     <option value="US">United States</option>
-                    <option value="CA">Canada</option>
-                    <option value="GB">United Kingdom</option>
-                    {/* Add more countries as needed */}
                   </select>
                   {errors.address?.country && (
                     <p className="text-red-500 text-sm">
@@ -318,7 +351,7 @@ const ShippingForm = ({
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  onClick={() => setStep("quantity")}
+                  onClick={() => setStep("contents")}
                   disabled={isSubmitting}
                 >
                   Back
@@ -340,36 +373,12 @@ const ShippingForm = ({
 };
 
 const ConnectedAccountTokenInfo = () => {
+  const [isShippingOpen, setIsShippingOpen] = useState(false);
   const { status, address } = useAccount();
-  const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
-  const connectors = useConnectors();
-  const connector = connectors[0];
-
-  if (status === "disconnected") {
-    return (
-      <div className="fixed top-4 left-4 z-50">
-        <Button
-          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-          onClick={() => connect({ connector })}
-        >
-          Connect Wallet
-        </Button>
-      </div>
-    );
-  }
-
-  if (status === "connecting" || status === "reconnecting") {
-    return (
-      <div className="fixed top-4 left-4 z-50 bg-gray-100 p-4 rounded shadow">
-        Connecting...
-      </div>
-    );
-  }
 
   if (status === "connected") {
     return (
-      <div className="fixed top-4 left-4 z-50 bg-white p-6 rounded shadow-lg border">
+      <div className="fixed top-4 left-4 z-50 bg-white p-6 shadow-sm border">
         <div className="space-y-4">
           {tokens.map((token: Token) => (
             <TokenBalanceInfo
@@ -378,11 +387,16 @@ const ConnectedAccountTokenInfo = () => {
               accountAddress={address}
             />
           ))}
+          <ShippingForm
+            isOpen={isShippingOpen}
+            onClose={() => setIsShippingOpen(false)}
+            address={address}
+          />
           <Button
-            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded w-full"
-            onClick={() => disconnect({ connector })}
+            onClick={() => setIsShippingOpen(true)}
+            className="w-full px-4 py-2 text-shiroWhite bg-hinokiWood hover:bg-kansoClay transition-colors duration-200 shadow-md font-medium"
           >
-            Disconnect
+            Ship Ammo
           </Button>
         </div>
       </div>
