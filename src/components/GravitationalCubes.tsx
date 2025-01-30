@@ -20,6 +20,7 @@ const INITIAL_LINEAR_VELOCITY_MAG = 3;
 interface SpawnedObject {
   ref: React.RefObject<RapierRigidBody>;
   position: THREE.Vector3;
+  rotation?: THREE.Euler;
 }
 
 function CenterSphere() {
@@ -146,27 +147,35 @@ function Scene() {
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
-      // Convert screen coordinates to world space position
+      // Convert mouse position to normalized device coordinates (-1 to +1)
       const mouse = new THREE.Vector2(
         (e.clientX / size.width) * 2 - 1,
         -(e.clientY / size.height) * 2 + 1
       );
 
-      const position = new THREE.Vector3(
-        mouse.x + (Math.random() * 2.0 - 1.0) * 15,
-        mouse.y + (Math.random() * 2.0 - 1.0) * 15,
-        Math.random() * 15 - 7.5
-      );
+      // Create ray caster and set it up with camera and mouse position
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
 
+      // Calculate position 15 units along the ray
+      const position = new THREE.Vector3();
+      raycaster.ray.at(15, position);
+
+      // Generate random rotation in radians (0 to 2π)
+      const rotation = new THREE.Euler(
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2
+      );
       const ref = React.createRef<RapierRigidBody>();
       setObjects((prev) => {
         if (prev.length <= 50) {
-          return [...prev, { ref, position }];
+          return [...prev, { ref, position, rotation }];
         }
         return prev;
       });
     },
-    [size.height, size.width]
+    [camera, size.height, size.width]
   );
 
   React.useEffect(() => {
@@ -187,7 +196,7 @@ function Scene() {
       <pointLight position={[10, 10, 10]} />
       <CenterSphere />
 
-      {objects.map(({ ref, position }, i) => {
+      {objects.map(({ ref, position, rotation }, i) => {
         const toCenter = new THREE.Vector3()
           .copy(position as THREE.Vector3)
           .multiplyScalar(-1)
@@ -199,6 +208,9 @@ function Scene() {
             key={i}
             ref={ref}
             position={[position.x, position.y, position.z]}
+            rotation={
+              rotation ? [rotation.x, rotation.y, rotation.z] : [0, 0, 0]
+            }
             linearVelocity={[toCenter.x, toCenter.y, toCenter.z]}
             angularVelocity={[
               (Math.random() - 0.5) * 2,
