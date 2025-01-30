@@ -13,9 +13,9 @@ import * as THREE from "three";
 
 // Customize these constants as needed
 const CENTER_RADIUS = 1;
-const GRAVITY_STRENGTH = 1;
+const GRAVITY_STRENGTH = 4;
 const MODEL_SCALE = 1; // Adjust to fit your model size
-const INITIAL_LINEAR_VELOCITY_MAG = 1;
+const INITIAL_LINEAR_VELOCITY_MAG = 3;
 
 interface SpawnedObject {
   ref: React.RefObject<RapierRigidBody>;
@@ -137,14 +137,10 @@ function Scene() {
       const distance = dir.length();
       dir.normalize();
 
-      // Force magnitude: scaled by distance
-      const forceMagnitude = GRAVITY_STRENGTH * (distance * 0.5);
+      const forceMagnitude = GRAVITY_STRENGTH / (distance * distance);
       dir.multiplyScalar(forceMagnitude);
 
-      // Apply force each frame
-      if (distance > 0.5) {
-        body.applyImpulse({ x: dir.x, y: dir.y, z: dir.z }, true);
-      }
+      body.applyImpulse({ x: dir.x, y: dir.y, z: dir.z }, true);
     }
   });
 
@@ -164,10 +160,10 @@ function Scene() {
 
       const ref = React.createRef<RapierRigidBody>();
       setObjects((prev) => {
-        if (prev.length >= 50) {
-          return [...prev.slice(1), { ref, position }];
+        if (prev.length <= 50) {
+          return [...prev, { ref, position }];
         }
-        return [...prev, { ref, position }];
+        return prev;
       });
     },
     [size.height, size.width]

@@ -25,7 +25,7 @@ const countrySchema = z
   .transform((val) => val.toUpperCase());
 
 // Main shipping information schema
-const shippingSchema = z.object({
+export const shippingSchema = z.object({
   // Unique identifier for the order
   orderId: z.string().uuid(),
 

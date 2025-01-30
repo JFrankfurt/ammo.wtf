@@ -21,7 +21,7 @@ type EncryptedPackage = {
    * Generates a random AES key
    * @returns A promise that resolves to an AES-GCM CryptoKey
    */
-  async function generateSymmetricKey(): Promise<CryptoKey> {
+  export async function generateSymmetricKey(): Promise<CryptoKey> {
     return crypto.subtle.generateKey(
       { name: "AES-GCM", length: 256 },
       true,
@@ -32,7 +32,7 @@ type EncryptedPackage = {
   /**
    * Encrypts data using AES-GCM
    */
-  async function encryptData(
+  export async function encryptData(
     data: string,
     aesKey: CryptoKey
   ): Promise<{ encryptedData: Uint8Array; iv: Uint8Array }> {
@@ -52,7 +52,7 @@ type EncryptedPackage = {
  * @param iv - The initialization vector (IV) as a Uint8Array
  * @returns A promise that resolves to the decrypted string
  */
-async function decryptData(
+export async function decryptData(
     encryptedData: Uint8Array,
     aesKey: CryptoKey,
     iv: Uint8Array
@@ -60,7 +60,7 @@ async function decryptData(
     const decryptedData = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv },
       aesKey,
-      encryptedData.buffer
+      encryptedData
     );
     return decode(new Uint8Array(decryptedData));
   }
@@ -69,7 +69,7 @@ async function decryptData(
   /**
    * Exports a CryptoKey to raw bytes
    */
-  async function exportKey(key: CryptoKey): Promise<Uint8Array> {
+  export async function exportKey(key: CryptoKey): Promise<Uint8Array> {
     const rawKey = await crypto.subtle.exportKey("raw", key);
     return new Uint8Array(rawKey);
   }
@@ -77,7 +77,7 @@ async function decryptData(
   /**
    * Encrypts the AES key using an ECC recipient's public key
    */
-  async function encryptSymmetricKey(
+  export async function encryptSymmetricKey(
     aesKey: CryptoKey,
     recipientPubKey: CryptoKey
   ): Promise<{ ephemeralPubKey: Uint8Array; encryptedSymmetricKey: Uint8Array }> {
@@ -111,7 +111,7 @@ async function decryptData(
   /**
    * Decrypts the AES key using ECC recipient's private key
    */
-  async function decryptSymmetricKey(
+  export async function decryptSymmetricKey(
     encryptedKeyData: { ephemeralPubKey: Uint8Array; encryptedSymmetricKey: Uint8Array },
     recipientPrivKey: CryptoKey
   ): Promise<CryptoKey> {
@@ -119,7 +119,7 @@ async function decryptData(
   
     const importedEphemeralPubKey = await crypto.subtle.importKey(
       "spki",
-      ephemeralPubKey.buffer,
+      ephemeralPubKey,
       { name: "ECDH", namedCurve: "P-256" },
       true,
       []
@@ -149,7 +149,7 @@ async function decryptData(
   /**
    * Full Example Flow
    */
-  async function example() {
+  export async function example() {
     const shippingData = JSON.stringify(exampleShippingData);
   
     // Generate example ECC key pair for the shipper - this public key will probably be hardcoded into the app
