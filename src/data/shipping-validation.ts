@@ -24,6 +24,23 @@ const countrySchema = z
   .regex(/^[A-Z]{2}$/, "Must be ISO 3166-1 alpha-2 country code")
   .transform((val) => val.toUpperCase());
 
+const RESTRICTED_STATES = [
+  'NY', 'IL', 'MA', 'NJ', 'CT', 'CA',
+  'NEW YORK', 'ILLINOIS', 'MASSACHUSETTS', 'NEW JERSEY', 'CONNECTICUT', 'CALIFORNIA'
+];
+
+const stateSchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .transform(state => state.toUpperCase().trim())
+  .refine(
+    (state) => !RESTRICTED_STATES.includes(state),
+    {
+      message: "We cannot ship to NY, IL, MA, NJ, CT, or CA due to regulatory restrictions"
+    }
+  );
+
 // Main shipping information schema
 export const shippingSchema = z.object({
   // Unique identifier for the order
@@ -41,9 +58,9 @@ export const shippingSchema = z.object({
     street1: z.string().min(1).max(100),
     street2: z.string().max(100).optional(),
     city: z.string().min(1).max(100),
-    state: z.string().min(1).max(100),
+    state: stateSchema,
     postalCode: postalCodeSchema,
-    country: countrySchema,
+    country: z.literal("US"),  // Changed from countrySchema since we only accept US
   }),
 
   // Additional shipping preferences

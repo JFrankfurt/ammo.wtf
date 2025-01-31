@@ -244,7 +244,7 @@ export const ShippingForm = ({
               <div className="flex justify-end gap-2">
                 <Button
                   onClick={() => setStep("shipping")}
-                  disabled={!hasSelectedQuantities}
+                  disabled={hasSelectedQuantities}
                 >
                   Next
                 </Button>
@@ -334,17 +334,14 @@ export const ShippingForm = ({
                 </div>
 
                 <div>
-                  <select
+                  <input
                     {...register("address.country")}
-                    className="w-full border p-2"
-                  >
-                    <option value="US">United States</option>
-                  </select>
-                  {errors.address?.country && (
-                    <p className="text-red-500 text-sm">
-                      {errors.address.country.message}
-                    </p>
-                  )}
+                    type="hidden"
+                    value="US"
+                  />
+                  <div className="w-full border p-2 bg-gray-100 text-gray-700">
+                    United States
+                  </div>
                 </div>
               </div>
 
@@ -378,7 +375,7 @@ const ConnectedAccountTokenInfo = () => {
 
   if (status === "connected") {
     return (
-      <div className="fixed top-4 left-4 z-50 bg-white p-6 shadow-sm border">
+      <div className="fixed bottom-4 left-4">
         <div className="space-y-4">
           {tokens.map((token: Token) => (
             <TokenBalanceInfo
@@ -394,7 +391,7 @@ const ConnectedAccountTokenInfo = () => {
           />
           <Button
             onClick={() => setIsShippingOpen(true)}
-            className="w-full px-4 py-2 text-shiroWhite bg-hinokiWood hover:bg-kansoClay transition-colors duration-200 shadow-md font-medium"
+            className="w-full px-4 py-2 text-shiroWhite bg-black shadow font-medium"
           >
             Ship Ammo
           </Button>
