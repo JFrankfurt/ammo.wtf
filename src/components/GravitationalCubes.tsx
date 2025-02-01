@@ -216,7 +216,7 @@ function Scene() {
             ]}
             friction={1}
             restitution={0.5}
-            angularDamping={1}
+            angularDamping={0.1}
             linearDamping={1}
             mass={1}
           />

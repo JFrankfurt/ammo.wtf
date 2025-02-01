@@ -83,7 +83,7 @@ export const ShippingForm = ({
         city: "",
         state: "",
         postalCode: "",
-        country: "",
+        country: "US" as const,
       },
       preferences: {
         requireSignature: true,
@@ -183,7 +183,7 @@ export const ShippingForm = ({
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
         <DialogPanel className="max-w-4xl space-y-4 border bg-white p-12">
-          <DialogTitle className="font-bold">Ship Tokens</DialogTitle>
+          <DialogTitle className="font-bold">Ship Ammo</DialogTitle>
 
           {step === "contents" ? (
             <div className="space-y-4">

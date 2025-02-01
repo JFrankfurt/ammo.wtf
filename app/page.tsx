@@ -1,3 +1,4 @@
+import AdminPanel from "@/src/components/AdminPanel";
 import { ConnectedAccountInfo } from "@/src/components/ConnectedAccountInfo";
 import ConnectedAccountTokenInfo from "@/src/components/ConnectedAccountTokenInfo";
 import GravitationalCubes from "@/src/components/GravitationalCubes";
@@ -9,6 +10,7 @@ const Home: FC = () => {
       <ConnectedAccountTokenInfo />
       <ConnectedAccountInfo />
       <GravitationalCubes />
+      <AdminPanel />
     </div>
   );
 };

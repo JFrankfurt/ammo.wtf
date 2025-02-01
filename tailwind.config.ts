@@ -33,6 +33,45 @@ const config: Config = {
 
         // Red for Vitality
         akaneRed: "#C94A3D",
+
+        // Form-specific colors
+        form: {
+          input: {
+            border: "#E7E2D1",     // washiBeige
+            focus: "#8CA38F",      // matchaGreen
+            text: "#373532",       // sumiBlack
+            placeholder: "#857F72", // wabiSabiOlive
+            disabled: "#A3A3A2",   // ashiStone
+          },
+          label: "#555555",        // kuroganeSteel
+          error: "#C94A3D",        // akaneRed
+        }
+      },
+      spacing: {
+        'form-input-height': '3rem',
+        'form-gap': '1.5rem',
+        'form-padding': '0.75rem',
+      },
+      borderRadius: {
+        'form': '0.375rem',
+      },
+      boxShadow: {
+        'form': '0 2px 4px rgba(0, 0, 0, 0.05)',
+        'form-focus': '0 0 0 2px rgba(140, 163, 143, 0.2)', // matchaGreen with opacity
+      },
+      fontSize: {
+        'form-label': ['0.875rem', '1.25rem'],
+        'form-input': ['1rem', '1.5rem'],
+        'form-error': ['0.75rem', '1rem'],
+      },
+      transitionProperty: {
+        'form': 'border-color, box-shadow, background-color',
+      },
+      transitionDuration: {
+        'form': '150ms',
+      },
+      transitionTimingFunction: {
+        'form': 'cubic-bezier(0.4, 0, 0.2, 1)',
       },
       keyframes: {
         bgCycle: {
