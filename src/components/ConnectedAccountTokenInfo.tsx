@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { v4 as uuidv4 } from "uuid";
 import { useAccount, useReadContract } from "wagmi";
 import { z } from "zod";
-import erc20Abi from "../abi/erc20";
+import erc20Abi from "../abi/ammoTokenERC20";
 import {
   encryptData,
   encryptSymmetricKey,
