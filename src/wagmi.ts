@@ -1,15 +1,16 @@
-import { createConfig, http } from "wagmi";
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { http } from "wagmi";
 import { base, baseSepolia } from "wagmi/chains";
-import { coinbaseWallet } from "wagmi/connectors";
 
-export const config = createConfig({
+export const config = getDefaultConfig({
+  appName: 'My RainbowKit App',
+  projectId: 'YOUR_PROJECT_ID',
   chains: [base, baseSepolia],
-  connectors: [coinbaseWallet({ appName: "onchainkit" })],
-  ssr: true,
   transports: {
     [base.id]: http(),
     [baseSepolia.id]: http(),
   },
+  ssr: true, // If your dApp uses server side rendering (SSR)
 });
 
 declare module "wagmi" {

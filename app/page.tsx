@@ -1,14 +1,16 @@
 import AdminPanel from "@/src/components/AdminPanel";
-import { ConnectedAccountInfo } from "@/src/components/ConnectedAccountInfo";
 import ConnectedAccountTokenInfo from "@/src/components/ConnectedAccountTokenInfo";
 import GravitationalCubes from "@/src/components/GravitationalCubes";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { FC } from "react";
 
 const Home: FC = () => {
   return (
     <div className="relative">
       <ConnectedAccountTokenInfo />
-      <ConnectedAccountInfo />
+      <div className="fixed top-4 right-4">
+        <ConnectButton />
+      </div>
       <GravitationalCubes />
       <AdminPanel />
     </div>

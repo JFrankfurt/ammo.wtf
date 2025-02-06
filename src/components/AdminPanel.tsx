@@ -82,10 +82,11 @@ export default function AdminPanel() {
         </div>
       </Dialog>
 
-      {ADMIN_ACCOUNTS.includes(address as `0x${string}`) && (
+      {ADMIN_ACCOUNTS.includes(
+        ((address as `0x${string}`) || "").toLowerCase()
+      ) && (
         <Button
-          className="fixed bottom-4 right-4 bg-sumiBlack text-shiroWhite px-6 py-3 
-                     rounded-form hover:bg-kuroganeSteel transition-form duration-form"
+          className="fixed bottom-4 right-4 bg-black text-shiroWhite px-6 py-3"
           onClick={() => setIsOpen(!isOpen)}
         >
           Admin Panel

@@ -1,15 +1,21 @@
 "use client";
 
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import "@rainbow-me/rainbowkit/styles.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { OnchainKitProvider } from "@coinbase/onchainkit";
+import { WagmiProvider } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { config } from "./wagmi";
-import { WagmiProvider } from "wagmi";
+
+const queryClient = new QueryClient();
 
 export function Providers(props: { children: ReactNode }) {
   return (
-    <OnchainKitProvider chain={baseSepolia}>
-      <WagmiProvider config={config}>{props.children}</WagmiProvider>
-    </OnchainKitProvider>
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>{props.children}</RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }
