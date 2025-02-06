@@ -1,4 +1,3 @@
-import "@coinbase/onchainkit/styles.css";
 import { Providers } from "@/src/providers";
 import "../styles/globals.css";
 
