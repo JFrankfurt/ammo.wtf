@@ -17,35 +17,33 @@ const postalCodeSchema = z
   .max(10)
   .regex(/^[A-Z0-9 -]*$/i, "Invalid postal code format");
 
-// Country code must be ISO 3166-1 alpha-2
-const countrySchema = z
-  .string()
-  .length(2)
-  .regex(/^[A-Z]{2}$/, "Must be ISO 3166-1 alpha-2 country code")
-  .transform((val) => val.toUpperCase());
-
 const RESTRICTED_STATES = [
-  'NY', 'IL', 'MA', 'NJ', 'CT', 'CA',
-  'NEW YORK', 'ILLINOIS', 'MASSACHUSETTS', 'NEW JERSEY', 'CONNECTICUT', 'CALIFORNIA'
+  "NY",
+  "IL",
+  "MA",
+  "NJ",
+  "CT",
+  "CA",
+  "NEW YORK",
+  "ILLINOIS",
+  "MASSACHUSETTS",
+  "NEW JERSEY",
+  "CONNECTICUT",
+  "CALIFORNIA",
 ];
 
 const stateSchema = z
   .string()
   .min(1)
   .max(100)
-  .transform(state => state.toUpperCase().trim())
-  .refine(
-    (state) => !RESTRICTED_STATES.includes(state),
-    {
-      message: "We cannot ship to NY, IL, MA, NJ, CT, or CA due to regulatory restrictions"
-    }
-  );
+  .transform((state) => state.toUpperCase().trim())
+  .refine((state) => !RESTRICTED_STATES.includes(state), {
+    message:
+      "We cannot ship to NY, IL, MA, NJ, CT, or CA due to regulatory restrictions",
+  });
 
 // Main shipping information schema
 export const shippingSchema = z.object({
-  // Unique identifier for the order
-  orderId: z.string().uuid(),
-
   // Recipient information
   recipient: z.object({
     name: z.string().min(1).max(100),
@@ -60,7 +58,7 @@ export const shippingSchema = z.object({
     city: z.string().min(1).max(100),
     state: stateSchema,
     postalCode: postalCodeSchema,
-    country: z.literal("US"),  // Changed from countrySchema since we only accept US
+    country: z.literal("US"), // Changed from countrySchema since we only accept US
   }),
 
   // Additional shipping preferences
@@ -73,17 +71,14 @@ export const shippingSchema = z.object({
   // Metadata for versioning and tracking
   metadata: z.object({
     version: z.literal("1.0"), // Schema version
-    timestamp: z.number().int().positive(),
     origin: z.string().max(50), // e.g., "marketplace-v2"
   }),
 });
 
 type ShippingData = z.infer<typeof shippingSchema>;
 
-
 // Example usage
 export const exampleShippingData: ShippingData = {
-  orderId: "0xasdfasdftransactionhash",
   recipient: {
     name: "John Doe",
     email: "john.doe@example.com",
@@ -104,7 +99,6 @@ export const exampleShippingData: ShippingData = {
   },
   metadata: {
     version: "1.0",
-    timestamp: Date.now(),
     origin: "marketplace-v2",
   },
 };

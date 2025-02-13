@@ -1,19 +1,31 @@
 "use client";
 
-import { Button, Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { v4 as uuidv4 } from "uuid";
-import { useAccount, useReadContract } from "wagmi";
+import { parseEther } from "viem";
+import {
+  useAccount,
+  useReadContract,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
 import { z } from "zod";
-import erc20Abi from "../abi/ammoTokenERC20";
+import {
+  default as ammoTokenABI,
+  default as erc20Abi,
+} from "../abi/ammoTokenERC20";
+import { TEST_556_TOKEN_ADDRESS } from "../addresses";
+import { getShipperPublicKey } from "../data/shipper-keys";
 import {
   encryptData,
   encryptSymmetricKey,
   generateSymmetricKey,
 } from "../data/shipping-encryption";
 import { shippingSchema } from "../data/shipping-validation";
+import { Button } from "./Button";
+import { TransactionStates } from "./TransactionStates";
 
 export interface Token {
   address: `0x${string}`;
@@ -23,8 +35,8 @@ export interface Token {
 
 export const tokens: Token[] = [
   {
-    address: "0x0000000000000000000000000000000000000000",
-    symbol: "5.56",
+    address: TEST_556_TOKEN_ADDRESS.address as `0x${string}`,
+    symbol: "TEST 5.56",
     priceUsd: 0.75,
   },
 ];
@@ -41,10 +53,12 @@ export const TokenBalanceInfo = ({
     args: [accountAddress],
   });
 
+  const formattedBalance = balance ? Number(balance) / Math.pow(10, 18) : null;
+
   return (
     <div className="space-y-4 flex flex-row justify-between">
       <div className="text-lg">
-        {symbol}: {balance?.toString() || "none"}
+        {symbol}: {formattedBalance?.toLocaleString() || "none"}
       </div>
     </div>
   );
@@ -54,14 +68,17 @@ export const ShippingForm = ({
   isOpen,
   onClose,
   address,
+  tokenAddress,
 }: {
   isOpen: boolean;
   onClose: () => void;
   address: `0x${string}`;
+  tokenAddress: `0x${string}`;
 }) => {
   const [step, setStep] = useState<"contents" | "shipping">("contents");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const {
     register,
@@ -92,8 +109,7 @@ export const ShippingForm = ({
       },
       metadata: {
         version: "1.0" as const,
-        timestamp: 0,
-        origin: "marketplace-v2",
+        origin: "marketplace-v1",
       },
     },
   });
@@ -105,7 +121,11 @@ export const ShippingForm = ({
     args: [address],
   });
 
-  const balances = [{ token: tokens[0], balance: balance556 || BigInt(0) }];
+  const formattedBalance556 = balance556
+    ? Number(balance556) / Math.pow(10, 18)
+    : 0;
+
+  const balances = [{ token: tokens[0], balance: formattedBalance556 }];
 
   const handleQuantityChange = (address: string, value: number) => {
     setQuantities((prev) => ({
@@ -126,57 +146,87 @@ export const ShippingForm = ({
     (qty) => qty > 0
   );
 
+  const {
+    writeContract,
+    isError,
+    error: writeContractError,
+    data: hash,
+    isPending,
+  } = useWriteContract();
+
+  const { chain } = useAccount();
+
   const onSubmit = async (data: z.infer<typeof shippingSchema>) => {
     try {
       setIsSubmitting(true);
+      setError(null);
 
       // Prepare shipping data
       const shippingData = {
         ...data,
-        orderId: uuidv4(),
         metadata: {
           version: "1.0",
-          timestamp: Date.now(),
-          origin: "marketplace-v2",
+          origin: "marketplace-v1",
         },
         quantity: totalValue,
       };
 
       // Generate example ECC key pair for the shipper
-      const shipperKeyPair = await crypto.subtle.generateKey(
-        { name: "ECDH", namedCurve: "P-256" },
-        true,
-        ["deriveKey", "deriveBits"]
+      const shipperPublicKey = await getShipperPublicKey();
+      const aesKey = await generateSymmetricKey();
+      const encryptedKeyData = await encryptSymmetricKey(
+        aesKey,
+        shipperPublicKey
       );
 
       // Encrypt shipping data
-      const aesKey = await generateSymmetricKey();
       const { encryptedData, iv } = await encryptData(
         JSON.stringify(shippingData),
         aesKey
       );
-      const encryptedKeyData = await encryptSymmetricKey(
-        aesKey,
-        shipperKeyPair.publicKey
-      );
 
-      // TODO: Submit encrypted data to blockchain
-      console.log("Encrypted package:", {
-        encryptedData,
-        iv,
-        ...encryptedKeyData,
+      // Convert the encrypted package to a single bytes string
+      const encryptedPackageBytes = new Uint8Array([
+        ...iv,
+        ...encryptedData,
+        ...encryptedKeyData.ephemeralPubKey,
+        ...encryptedKeyData.encryptedSymmetricKey,
+      ]);
+
+      // Submit to blockchain
+      await writeContract({
+        abi: ammoTokenABI,
+        address: tokenAddress,
+        functionName: "redeem",
+        args: [
+          address as `0x${string}`,
+          parseEther(totalValue.toString()),
+          `0x${Buffer.from(encryptedPackageBytes).toString(
+            "hex"
+          )}` as `0x${string}`,
+        ],
       });
 
-      reset();
-      setQuantities({});
-      setStep("contents");
-      onClose();
+      // Don't reset form here - wait for confirmation
     } catch (error) {
       console.error("Error submitting shipping form:", error);
-      // TODO: Add proper error handling/display
-    } finally {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred while submitting your shipping information."
+      );
       setIsSubmitting(false);
     }
+  };
+
+  // Optional: Watch for transaction completion
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash: hash,
+    });
+
+  const onError = (errors: any) => {
+    console.error("Form validation errors:", errors);
   };
 
   return (
@@ -184,6 +234,12 @@ export const ShippingForm = ({
       <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
         <DialogPanel className="max-w-4xl space-y-4 border bg-white p-12">
           <DialogTitle className="font-bold">Ship Ammo</DialogTitle>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded">
+              {error}
+            </div>
+          )}
 
           {step === "contents" ? (
             <div className="space-y-4">
@@ -198,7 +254,7 @@ export const ShippingForm = ({
                 </thead>
                 <tbody>
                   {balances.map(({ token, balance }) => {
-                    const maxUnits = Number(balance) / 250;
+                    const maxUnits = balance / 250;
                     const quantity = quantities[token.address] || 0;
                     const value = quantity * 250 * token.priceUsd;
 
@@ -244,14 +300,18 @@ export const ShippingForm = ({
               <div className="flex justify-end gap-2">
                 <Button
                   onClick={() => setStep("shipping")}
-                  disabled={hasSelectedQuantities}
+                  disabled={!hasSelectedQuantities}
+                  variant="primary"
                 >
                   Next
                 </Button>
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={handleSubmit(onSubmit, onError)}
+              className="space-y-4"
+            >
               <div className="space-y-2">
                 <div>
                   <input
@@ -276,6 +336,20 @@ export const ShippingForm = ({
                   {errors.recipient?.email && (
                     <p className="text-red-500 text-sm">
                       {errors.recipient.email.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <input
+                    {...register("recipient.phone")}
+                    className="w-full border p-2"
+                    placeholder="Phone Number"
+                    type="tel"
+                  />
+                  {errors.recipient?.phone && (
+                    <p className="text-red-500 text-sm">
+                      {errors.recipient.phone.message}
                     </p>
                   )}
                 </div>
@@ -343,24 +417,84 @@ export const ShippingForm = ({
                     United States
                   </div>
                 </div>
+
+                <div className="space-y-4 border-t pt-4 mt-4">
+                  <h3 className="font-medium">Delivery Preferences</h3>
+
+                  <div>
+                    <textarea
+                      {...register("preferences.specialInstructions")}
+                      className="w-full border p-2 h-24"
+                      placeholder="Special delivery instructions (optional)"
+                    />
+                    {errors.preferences?.specialInstructions && (
+                      <p className="text-red-500 text-sm">
+                        {errors.preferences.specialInstructions.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {Object.keys(errors).length > 0 && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded">
+                  <p>Form has validation errors:</p>
+                  <pre className="text-sm mt-2">
+                    {JSON.stringify(errors, null, 2)}
+                  </pre>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <Button
                   type="button"
                   onClick={() => setStep("contents")}
                   disabled={isSubmitting}
+                  variant="secondary"
                 >
                   Back
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isConfirming}
+                  variant="primary"
+                  className="flex-1 flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? "Submitting..." : "Submit"}
+                  {isSubmitting ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>Preparing...</span>
+                    </>
+                  ) : isConfirming ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>Confirming...</span>
+                    </>
+                  ) : (
+                    "Submit"
+                  )}
                 </Button>
               </div>
+
+              {isError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded">
+                  {writeContractError?.message ||
+                    "Failed to submit transaction"}
+                </div>
+              )}
+
+              {hash && (
+                <TransactionStates
+                  hash={hash}
+                  onClose={() => {
+                    reset();
+                    setQuantities({});
+                    setStep("contents");
+                    onClose();
+                  }}
+                  chainId={chain?.id ?? 1}
+                />
+              )}
             </form>
           )}
         </DialogPanel>
@@ -388,10 +522,12 @@ const ConnectedAccountTokenInfo = () => {
             isOpen={isShippingOpen}
             onClose={() => setIsShippingOpen(false)}
             address={address}
+            tokenAddress={TEST_556_TOKEN_ADDRESS.address as `0x${string}`}
           />
           <Button
             onClick={() => setIsShippingOpen(true)}
-            className="w-full px-4 py-2 text-shiroWhite bg-black shadow font-medium"
+            variant="primary"
+            fullWidth
           >
             Ship Ammo
           </Button>
