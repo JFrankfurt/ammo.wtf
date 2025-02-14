@@ -18,7 +18,9 @@ export const TransactionStates = ({
 
   const getExplorerUrl = () => {
     const baseUrl =
-      chainId === 5 ? "https://goerli.etherscan.io" : "https://etherscan.io";
+      chainId !== 8545
+        ? "https://sepolia.basescan.org"
+        : "https://basescan.org";
     return `${baseUrl}/tx/${hash}`;
   };
 
@@ -56,7 +58,7 @@ export const TransactionStates = ({
               rel="noopener noreferrer"
               className="text-blue-500 hover:text-blue-600 underline"
             >
-              View on Etherscan
+              View on Basescan
             </a>
           </div>
         </div>
@@ -70,7 +72,8 @@ export const TransactionStates = ({
         <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full space-y-4">
           <h3 className="font-medium text-lg text-green-600">Success!</h3>
           <p className="text-gray-600">
-            Your shipping information has been submitted successfully.
+            Your token redemption order has been submitted successfully. You
+            will receive an email with your order details.
           </p>
           <div className="text-center">
             <a
@@ -79,7 +82,7 @@ export const TransactionStates = ({
               rel="noopener noreferrer"
               className="text-blue-500 hover:text-blue-600 underline"
             >
-              View on Etherscan
+              View on Basescan
             </a>
           </div>
           <div className="flex justify-end">
@@ -109,7 +112,7 @@ export const TransactionStates = ({
               rel="noopener noreferrer"
               className="text-blue-500 hover:text-blue-600 underline"
             >
-              View on Etherscan
+              View on Basescan
             </a>
           </div>
           <div className="flex justify-end">
