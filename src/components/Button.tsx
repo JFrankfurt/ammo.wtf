@@ -15,7 +15,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           // Base styles
           "px-4 py-2",
           "font-medium",
-          "rounded-form",
           "transition-form",
           "duration-form",
           "disabled:cursor-not-allowed",
