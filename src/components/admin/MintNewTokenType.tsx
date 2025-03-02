@@ -5,10 +5,12 @@ import { useWriteContract } from "wagmi";
 import { useCallback, useState } from "react";
 import ammoTokenFactory from "@/src/abi/ammoFactory";
 import { FACTORY_ADDRESS } from "@/src/addresses";
+import { parseEther } from "viem";
 
 export function MintNewTokenType({ onBack }: { onBack: () => void }) {
   const [tokenName, setTokenName] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
+  const [initialSupply, setInitialSupply] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [txHash, setTxHash] = useState<string>("");
@@ -26,7 +28,7 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
         address: FACTORY_ADDRESS as `0x${string}`,
         abi: ammoTokenFactory,
         functionName: "createToken",
-        args: [tokenName, tokenSymbol],
+        args: [tokenName, tokenSymbol, parseEther(initialSupply)],
       },
       {
         onSuccess: (hash) => {
@@ -38,7 +40,7 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
         },
       }
     );
-  }, [writeContract, tokenName, tokenSymbol]);
+  }, [tokenName, tokenSymbol, writeContract, initialSupply]);
 
   if (success) {
     return (
@@ -91,6 +93,13 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
         id="tokenSymbol"
         value={tokenSymbol}
         onChange={(e) => setTokenSymbol(e.target.value)}
+      />
+      <FormInput
+        label="Initial Supply"
+        placeholder="Enter initial supply"
+        id="initialSupply"
+        value={initialSupply}
+        onChange={(e) => setInitialSupply(e.target.value)}
       />
       <div className="flex justify-between pt-4">
         <Button

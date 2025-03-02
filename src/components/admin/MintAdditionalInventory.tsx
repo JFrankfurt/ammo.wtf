@@ -1,7 +1,7 @@
 import { DialogTitle } from "@headlessui/react";
 import { FormInput } from "@/src/components/FormInput";
 import { Button } from "@headlessui/react";
-import { useWriteContract } from "wagmi";
+import { useAccount, useWriteContract } from "wagmi";
 import { useCallback, useState } from "react";
 import { TOKEN_ADDRESSES } from "@/src/addresses";
 import { FormSelect } from "@/src/components/FormSelect";
@@ -14,6 +14,7 @@ export function MintAdditionalInventory({ onBack }: { onBack: () => void }) {
   const [recipientAddress, setRecipientAddress] = useState("");
   const [amount, setAmount] = useState("");
   const { writeContract, isPending: isLoading } = useWriteContract();
+  const { chainId } = useAccount();
 
   const mintTokens = useCallback(() => {
     if (!tokenAddress || !recipientAddress || !amount) {
@@ -30,7 +31,9 @@ export function MintAdditionalInventory({ onBack }: { onBack: () => void }) {
       ],
     });
   }, [writeContract, tokenAddress, recipientAddress, amount]);
-
+  if (!chainId) {
+    return <div>Connect to a network</div>;
+  }
   return (
     <div className="space-y-form-gap">
       <DialogTitle className="text-2xl font-medium text-sumiBlack mb-6">
@@ -41,7 +44,7 @@ export function MintAdditionalInventory({ onBack }: { onBack: () => void }) {
         onChange={(e) => setTokenAddress(e.target.value)}
         label="Token Address"
         id="tokenAddress"
-        options={TOKEN_ADDRESSES.map((token) => ({
+        options={TOKEN_ADDRESSES[chainId].map((token) => ({
           value: token.address,
           label: `${token.name} (${truncateAddress(token.address)})`,
         }))}

@@ -16,7 +16,7 @@ import {
   default as ammoTokenABI,
   default as erc20Abi,
 } from "../abi/ammoTokenERC20";
-import { TEST_556_TOKEN_ADDRESS } from "../addresses";
+import { TEST_556_TOKEN_ADDRESS, USDC_ADDRESS } from "../addresses";
 import { getShipperPublicKey } from "../data/shipper-keys";
 import {
   encryptData,
@@ -26,6 +26,8 @@ import {
 import { shippingSchema } from "../data/shipping-validation";
 import { Button } from "./Button";
 import { TransactionStates } from "./TransactionStates";
+import { base } from "viem/chains";
+import { uniswapChainStringNames } from "../utils/chainInfo";
 
 export interface Token {
   address: `0x${string}`;
@@ -33,21 +35,12 @@ export interface Token {
   priceUsd: number;
 }
 
-export const tokens: Token[] = [
-  {
-    address: TEST_556_TOKEN_ADDRESS.address as `0x${string}`,
-    symbol: "TEST 5.56",
-    priceUsd: 0.75,
-  },
-];
-
-const BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-
 export const TokenBalanceInfo = ({
   address,
   symbol,
   accountAddress,
 }: Token & { accountAddress: `0x${string}` }) => {
+  const { chainId } = useAccount();
   const { data: balance } = useReadContract({
     address,
     abi: erc20Abi,
@@ -55,8 +48,12 @@ export const TokenBalanceInfo = ({
     args: [accountAddress],
   });
 
+  const chainStringName = uniswapChainStringNames[chainId ?? base.id];
+
   const formattedBalance = balance ? Number(balance) / Math.pow(10, 18) : 0;
-  const uniswapUrl = `https://app.uniswap.org/swap?chain=base&inputCurrency=${BASE_USDC_ADDRESS}&outputCurrency=${address}`;
+  const uniswapUrl = `https://app.uniswap.org/swap?chain=${chainStringName}&inputCurrency=${
+    USDC_ADDRESS[chainId ?? base.id]
+  }&outputCurrency=${address}`;
 
   return (
     <div className="border rounded-lg p-4 bg-white shadow-sm">
@@ -130,6 +127,7 @@ export const ShippingForm = ({
   address: `0x${string}`;
   tokenAddress: `0x${string}`;
 }) => {
+  const { chainId } = useAccount();
   const [step, setStep] = useState<"contents" | "shipping">("contents");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -170,7 +168,8 @@ export const ShippingForm = ({
   });
 
   const { data: balance556 } = useReadContract({
-    address: tokens[0].address,
+    address: TEST_556_TOKEN_ADDRESS[chainId ?? base.id]
+      .address as `0x${string}`,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: [address],
@@ -180,7 +179,14 @@ export const ShippingForm = ({
     ? Number(balance556) / Math.pow(10, 18)
     : 0;
 
-  const balances = [{ token: tokens[0], balance: formattedBalance556 }];
+  const balances = [
+    {
+      token: TEST_556_TOKEN_ADDRESS[chainId ?? base.id],
+      symbol: "TEST 5.56",
+      balance: formattedBalance556,
+      priceUsd: 0.3,
+    },
+  ];
 
   const handleQuantityChange = (address: string, value: number) => {
     setQuantities((prev) => ({
@@ -194,10 +200,11 @@ export const ShippingForm = ({
     0
   );
 
+  // todo: rewrite to use hardcoded token addresses list from addresses.ts
   const totalValueUsd = Object.entries(quantities).reduce(
     (sum, [address, qty]) => {
-      const token = tokens.find((t) => t.address === address);
-      return sum + (token?.priceUsd || 0) * qty * 250;
+      const token = balances.find((t) => t.token.address === address);
+      return sum + (token?.priceUsd ?? 0.3) * qty * 250;
     },
     0
   );
@@ -323,14 +330,14 @@ export const ShippingForm = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {balances.map(({ token, balance }) => {
+                    {balances.map(({ token, balance, priceUsd, symbol }) => {
                       const maxUnits = balance / 250;
                       const quantity = quantities[token.address] || 0;
-                      const value = quantity * 250 * token.priceUsd;
+                      const value = quantity * 250 * priceUsd;
 
                       return (
                         <tr key={token.address}>
-                          <td className="p-2">{token.symbol}</td>
+                          <td className="p-2">{symbol}</td>
                           <td className="text-right p-2">
                             {balance.toString()}
                           </td>
@@ -357,7 +364,7 @@ export const ShippingForm = ({
                             </select>
                           </td>
                           <td className="text-right p-2">{quantity * 250}</td>
-                          <td className="text-right p-2">${token.priceUsd}</td>
+                          <td className="text-right p-2">${priceUsd}</td>
                           <td className="text-right p-2">
                             ${value.toFixed(2)}
                           </td>
@@ -378,17 +385,17 @@ export const ShippingForm = ({
 
               {/* Card layout for mobile */}
               <div className="md:hidden space-y-4">
-                {balances.map(({ token, balance }) => {
+                {balances.map(({ token, balance, priceUsd, symbol }) => {
                   const maxUnits = balance / 250;
                   const quantity = quantities[token.address] || 0;
-                  const value = quantity * 250 * token.priceUsd;
+                  const value = quantity * 250 * priceUsd;
 
                   return (
                     <div
                       key={token.address}
                       className="border rounded-lg p-4 space-y-3"
                     >
-                      <div className="font-bold text-lg">{token.symbol}</div>
+                      <div className="font-bold text-lg">{symbol}</div>
 
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>Available Rounds:</div>
@@ -422,7 +429,7 @@ export const ShippingForm = ({
                         <div className="text-right">{quantity * 250}</div>
 
                         <div>Price per Round:</div>
-                        <div className="text-right">${token.priceUsd}</div>
+                        <div className="text-right">${priceUsd}</div>
 
                         <div className="font-semibold">Value:</div>
                         <div className="text-right font-semibold">
@@ -648,30 +655,31 @@ export const ShippingForm = ({
 
 const ConnectedAccountTokenInfo = () => {
   const [isShippingOpen, setIsShippingOpen] = useState(false);
-  const { status, address } = useAccount();
+  const { status, address, chainId } = useAccount();
 
   if (status === "connected") {
     return (
       <div className="fixed bottom-4 left-4 max-w-sm w-full">
         <div className="space-y-4">
-          {tokens.map((token: Token) => (
-            <TokenBalanceInfo
-              key={token.address}
-              {...token}
-              accountAddress={address}
-            />
-          ))}
+          <TokenBalanceInfo
+            address={TEST_556_TOKEN_ADDRESS[chainId].address as `0x${string}`}
+            symbol="TEST 5.56"
+            priceUsd={0.3}
+            accountAddress={address}
+          />
           <ShippingForm
             isOpen={isShippingOpen}
             onClose={() => setIsShippingOpen(false)}
             address={address}
-            tokenAddress={TEST_556_TOKEN_ADDRESS.address as `0x${string}`}
+            tokenAddress={
+              TEST_556_TOKEN_ADDRESS[chainId].address as `0x${string}`
+            }
           />
           <Button
             onClick={() => setIsShippingOpen(true)}
             variant="primary"
             fullWidth
-            disabled={tokens.length === 0}
+            disabled={false} // todo: disable if no ammo
           >
             Ship Ammo
           </Button>
