@@ -1,5 +1,6 @@
 import { useWaitForTransactionReceipt } from "wagmi";
 import { Button } from "./Button";
+import { getExplorerUrl } from "../utils/blockExplorer";
 
 interface TransactionStatesProps {
   hash: `0x${string}` | undefined;
@@ -15,14 +16,6 @@ export const TransactionStates = ({
   const { isLoading, isSuccess, isError } = useWaitForTransactionReceipt({
     hash,
   });
-
-  const getExplorerUrl = () => {
-    const baseUrl =
-      chainId !== 8545
-        ? "https://sepolia.basescan.org"
-        : "https://basescan.org";
-    return `${baseUrl}/tx/${hash}`;
-  };
 
   if (!hash) {
     return (
@@ -53,12 +46,12 @@ export const TransactionStates = ({
           </div>
           <div className="text-center">
             <a
-              href={getExplorerUrl()}
+              href={`${getExplorerUrl(chainId)}/tx/${hash}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-500 hover:text-blue-600 underline"
             >
-              View on Basescan
+              View on block explorer
             </a>
           </div>
         </div>
@@ -77,12 +70,12 @@ export const TransactionStates = ({
           </p>
           <div className="text-center">
             <a
-              href={getExplorerUrl()}
+              href={`${getExplorerUrl(chainId)}/tx/${hash}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-500 hover:text-blue-600 underline"
             >
-              View on Basescan
+              View on block explorer
             </a>
           </div>
           <div className="flex justify-end">
@@ -107,12 +100,12 @@ export const TransactionStates = ({
           </p>
           <div className="text-center">
             <a
-              href={getExplorerUrl()}
+              href={`${getExplorerUrl(chainId)}/tx/${hash}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-500 hover:text-blue-600 underline"
             >
-              View on Basescan
+              View on block explorer
             </a>
           </div>
           <div className="flex justify-end">

@@ -1,11 +1,12 @@
 import { DialogTitle } from "@headlessui/react";
 import { FormInput } from "@/src/components/FormInput";
 import { Button } from "@headlessui/react";
-import { useWriteContract } from "wagmi";
+import { useAccount, useWriteContract } from "wagmi";
 import { useCallback, useState } from "react";
 import ammoTokenFactory from "@/src/abi/ammoFactory";
 import { FACTORY_ADDRESS } from "@/src/addresses";
 import { parseEther } from "viem";
+import { getExplorerUrl } from "@/src/utils/blockExplorer";
 
 export function MintNewTokenType({ onBack }: { onBack: () => void }) {
   const [tokenName, setTokenName] = useState("");
@@ -14,18 +15,29 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [txHash, setTxHash] = useState<string>("");
+  const { chainId } = useAccount();
   const { writeContract, isPending: isLoading } = useWriteContract();
 
   const createToken = useCallback(() => {
+    if (!chainId) {
+      setError("Please connect to a supported chain");
+      return;
+    }
     if (!tokenName || !tokenSymbol) {
       setError("Please fill in all fields");
       return;
     }
 
     setError("");
+    console.log("FACTORY_ADDRESS", FACTORY_ADDRESS[chainId]);
+    console.log("chainId", chainId);
+    console.log("tokenName", tokenName);
+    console.log("tokenSymbol", tokenSymbol);
+    console.log("initialSupply", initialSupply);
+    console.log("parseEther(initialSupply)", parseEther(initialSupply));
     writeContract(
       {
-        address: FACTORY_ADDRESS as `0x${string}`,
+        address: FACTORY_ADDRESS[chainId],
         abi: ammoTokenFactory,
         functionName: "createToken",
         args: [tokenName, tokenSymbol, parseEther(initialSupply)],
@@ -40,7 +52,7 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
         },
       }
     );
-  }, [tokenName, tokenSymbol, writeContract, initialSupply]);
+  }, [chainId, tokenName, tokenSymbol, writeContract, initialSupply]);
 
   if (success) {
     return (
@@ -52,12 +64,12 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
           New token type {tokenName} ({tokenSymbol}) has been created.
         </p>
         <a
-          href={`https://sepolia.basescan.org/tx/${txHash}`}
+          href={`${getExplorerUrl(chainId)}/tx/${txHash}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-hinokiWood hover:text-kansoClay underline"
         >
-          View transaction on Basescan
+          View transaction on block explorer
         </a>
         <div className="flex justify-end pt-4">
           <Button

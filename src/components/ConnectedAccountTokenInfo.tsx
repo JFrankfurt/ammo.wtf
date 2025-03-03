@@ -663,7 +663,7 @@ const ConnectedAccountTokenInfo = () => {
         <div className="space-y-4">
           <TokenBalanceInfo
             address={TEST_556_TOKEN_ADDRESS[chainId].address as `0x${string}`}
-            symbol="TEST 5.56"
+            symbol={TEST_556_TOKEN_ADDRESS[chainId].symbol}
             priceUsd={0.3}
             accountAddress={address}
           />

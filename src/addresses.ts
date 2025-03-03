@@ -3,6 +3,7 @@ import { baseSepolia, base, sepolia } from "viem/chains";
 interface TokenInfo {
   address: string;
   name: string;
+  symbol: string;
 }
 
 const FACTORY_ADDRESS: Record<number, `0x${string}`> = {
@@ -16,14 +17,17 @@ const TEST_556_TOKEN_ADDRESS: Record<number, TokenInfo> = {
   [baseSepolia.id]: {
     address: "0x5ccD30e539F24F34b870b8480d37e31f6D6F3ac7" as `0x${string}`,
     name: "TEST 556 Token",
+    symbol: "TEST 5.56",
   },
   [base.id]: {
     address: "" as `0x${string}`,
     name: "5.56×45mm NATO",
+    symbol: "5.56",
   },
   [sepolia.id]: {
-    address: "0x0" as `0x${string}`,
-    name: "TEST 5.56×45mm NATO",
+    address: "0x5ccD30e539F24F34b870b8480d37e31f6D6F3ac7" as `0x${string}`,
+    name: "5.56 77GR Bone Frog Ammunition™ Barnes Match Burner OTM BT",
+    symbol: "B556BMB77",
   },
 };
 
