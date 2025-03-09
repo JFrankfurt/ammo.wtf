@@ -1,35 +1,55 @@
-import { DialogTitle } from "@headlessui/react";
-import { FormInput } from "@/src/components/FormInput";
+import ammoFactoryABI from "@/src/abi/ammoFactory";
+import { FACTORY_ADDRESS } from "@/src/addresses";
 import { Button } from "@/src/components/Button";
+import { FormInput } from "@/src/components/FormInput";
+import { getExplorerUrl } from "@/src/utils/blockExplorer";
+import { DialogTitle } from "@headlessui/react";
+import { useCallback, useEffect, useState } from "react";
+import { base } from "viem/chains";
 import {
   useAccount,
+  useReadContract,
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
-import { useCallback, useEffect, useState } from "react";
-import ammoTokenFactory from "@/src/abi/ammoFactory";
-import { FACTORY_ADDRESS } from "@/src/addresses";
-import { parseEther } from "viem";
-import { getExplorerUrl } from "@/src/utils/blockExplorer";
 
 // Define the possible states for the component
-type MintState =
+type FeeRecipientState =
   | "idle" // Initial form state
   | "submitting" // Submitting transaction to wallet
   | "pending" // Transaction submitted, waiting for confirmation
   | "success" // Transaction confirmed successfully
   | "error"; // Transaction failed
 
-export function MintNewTokenType({ onBack }: { onBack: () => void }) {
-  const [tokenName, setTokenName] = useState("");
-  const [tokenSymbol, setTokenSymbol] = useState("");
-  const [initialSupply, setInitialSupply] = useState("");
+export function SetFeeDetails({ onBack }: { onBack: () => void }) {
+  const [recipientAddress, setRecipientAddress] = useState("");
+  const [feePercentage, setFeePercentage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
-  const [state, setState] = useState<MintState>("idle");
+  const [state, setState] = useState<FeeRecipientState>("idle");
 
   const { chainId } = useAccount();
-  const { writeContract } = useWriteContract();
+
+  const { data: feeDetails, refetch: refetchFeeDetails } = useReadContract({
+    address: FACTORY_ADDRESS[chainId ?? base.id],
+    abi: ammoFactoryABI,
+    functionName: "getFeeDetails",
+  });
+
+  // Set initial values from contract when data is loaded
+  useEffect(() => {
+    if (feeDetails && feeDetails.length >= 2) {
+      // Only set initial values if the form is empty
+      if (!recipientAddress && feeDetails[0]) {
+        setRecipientAddress(feeDetails[0]);
+      }
+
+      if (!feePercentage && feeDetails[1] !== undefined) {
+        // Convert from bigint to string for the input
+        setFeePercentage(feeDetails[1].toString());
+      }
+    }
+  }, [feeDetails, recipientAddress, feePercentage]);
 
   // Use the waitForTransactionReceipt hook to monitor transaction status
   const {
@@ -47,36 +67,46 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
         setState("pending");
       } else if (isTransactionSuccess) {
         setState("success");
+        // Refresh fee details after successful update
+        refetchFeeDetails();
       } else if (isTransactionError) {
         setState("error");
         setErrorMessage("Transaction failed. Please try again.");
       }
     }
-  }, [txHash, isTransactionPending, isTransactionSuccess, isTransactionError]);
+  }, [
+    txHash,
+    isTransactionPending,
+    isTransactionSuccess,
+    isTransactionError,
+    refetchFeeDetails,
+  ]);
 
-  const createToken = useCallback(() => {
-    if (!chainId) {
-      setErrorMessage("Please connect to a supported chain");
+  const { writeContract } = useWriteContract();
+
+  const handleSubmit = useCallback(() => {
+    if (!recipientAddress) {
+      setErrorMessage("Please enter a recipient address");
       return;
     }
-    if (!tokenName || !tokenSymbol) {
-      setErrorMessage("Please fill in all fields");
-      return;
-    }
-    if (!initialSupply || isNaN(Number(initialSupply))) {
-      setErrorMessage("Please enter a valid initial supply");
+
+    if (feePercentage === "" || isNaN(Number(feePercentage))) {
+      setErrorMessage("Please enter a valid fee percentage");
       return;
     }
 
     setErrorMessage("");
     setState("submitting");
 
+    // Convert fee percentage to BigInt
+    const feePercentageBigInt = BigInt(feePercentage);
+
     writeContract(
       {
-        address: FACTORY_ADDRESS[chainId],
-        abi: ammoTokenFactory,
-        functionName: "createToken",
-        args: [tokenName, tokenSymbol, parseEther(initialSupply)],
+        address: FACTORY_ADDRESS[chainId ?? base.id],
+        abi: ammoFactoryABI,
+        functionName: "setFeeDetails",
+        args: [recipientAddress as `0x${string}`, feePercentageBigInt],
       },
       {
         onSuccess: (hash) => {
@@ -84,19 +114,17 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
           setState("pending");
         },
         onError: (error) => {
-          setErrorMessage(error.message || "Failed to create token");
+          setErrorMessage(error.message || "Failed to update fee details");
           setState("error");
         },
       }
     );
-  }, [chainId, tokenName, tokenSymbol, writeContract, initialSupply]);
+  }, [recipientAddress, feePercentage, writeContract, chainId]);
 
   // Reset the form and state
   const handleReset = () => {
     setState("idle");
-    setTokenName("");
-    setTokenSymbol("");
-    setInitialSupply("");
+    // Don't reset the form values, just clear error and hash
     setErrorMessage("");
     setTxHash(undefined);
   };
@@ -127,9 +155,10 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
               </span>
             </div>
             <p className="text-sumiBlack">
-              New token type <span className="font-medium">{tokenName}</span> (
-              <span className="font-medium">{tokenSymbol}</span>) has been
-              created successfully with an initial supply of {initialSupply}.
+              Fee details have been successfully updated. Recipient is now{" "}
+              <span className="font-medium">{recipientAddress}</span> with a fee
+              percentage of <span className="font-medium">{feePercentage}</span>
+              .
             </p>
           </div>
           <div className="flex flex-col space-y-2">
@@ -153,7 +182,7 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
           </div>
           <div className="flex justify-between pt-4">
             <Button variant="secondary" onClick={handleReset}>
-              Create Another Token
+              Update Again
             </Button>
             <Button variant="primary" onClick={onBack}>
               Done
@@ -195,10 +224,8 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
               </span>
             </div>
             <p className="text-sumiBlack">
-              Your transaction to create token{" "}
-              <span className="font-medium">{tokenName}</span> (
-              <span className="font-medium">{tokenSymbol}</span>) is being
-              processed on the blockchain. This may take a few moments.
+              Your transaction to update the fee details is being processed on
+              the blockchain. This may take a few moments.
             </p>
           </div>
           <div className="flex flex-col space-y-2">
@@ -248,9 +275,8 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
               </span>
             </div>
             <p className="text-sumiBlack">
-              Please confirm the transaction in your wallet to create token{" "}
-              <span className="font-medium">{tokenName}</span> (
-              <span className="font-medium">{tokenSymbol}</span>).
+              Please confirm the transaction in your wallet to update the fee
+              details.
             </p>
           </div>
           <div className="flex justify-center">
@@ -328,7 +354,7 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
       return (
         <div className="space-y-4">
           <DialogTitle className="text-xl md:text-2xl font-medium text-sumiBlack">
-            Create New Token Type
+            Set Fee Details
           </DialogTitle>
           {errorMessage && (
             <div className="bg-red-50 p-3 rounded-xl border border-red-200">
@@ -350,25 +376,19 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
             </div>
           )}
           <FormInput
-            label="Token Name"
-            placeholder="Enter token name"
-            id="tokenName"
-            value={tokenName}
-            onChange={(e) => setTokenName(e.target.value)}
+            label="Recipient Address"
+            placeholder="Enter recipient address"
+            id="recipient"
+            value={recipientAddress}
+            onChange={(e) => setRecipientAddress(e.target.value)}
           />
           <FormInput
-            label="Token Symbol"
-            placeholder="Enter token symbol"
-            id="tokenSymbol"
-            value={tokenSymbol}
-            onChange={(e) => setTokenSymbol(e.target.value)}
-          />
-          <FormInput
-            label="Initial Supply"
-            placeholder="Enter initial supply"
-            id="initialSupply"
-            value={initialSupply}
-            onChange={(e) => setInitialSupply(e.target.value)}
+            label="Fee Percentage"
+            placeholder="Enter fee percentage"
+            id="feePercentage"
+            value={feePercentage}
+            onChange={(e) => setFeePercentage(e.target.value)}
+            type="number"
           />
           <div className="flex justify-between pt-4">
             <Button variant="secondary" onClick={onBack}>
@@ -376,10 +396,10 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
             </Button>
             <Button
               variant="primary"
-              disabled={!tokenName || !tokenSymbol || !initialSupply}
-              onClick={createToken}
+              disabled={!recipientAddress || !feePercentage}
+              onClick={handleSubmit}
             >
-              Create Token
+              Update Fee Details
             </Button>
           </div>
         </div>

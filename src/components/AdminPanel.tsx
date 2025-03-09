@@ -1,14 +1,16 @@
 "use client";
-import { Button, Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
-// mint new kinds of tokens
-// mint additional inventory of existing tokens
-// set new fee recipient
-
-import { useState } from "react";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  Transition,
+} from "@headlessui/react";
+import { Fragment, useState } from "react";
 import { useAccount } from "wagmi";
-import { MintNewTokenType } from "./admin/MintNewTokenType";
 import { MintAdditionalInventory } from "./admin/MintAdditionalInventory";
-import { SetFeeRecipient } from "./admin/SetFeeRecipient";
+import { MintNewTokenType } from "./admin/MintNewTokenType";
+import { SetFeeDetails } from "./admin/SetFeeDetails";
+import { Button } from "./Button";
 
 type AdminView = "main" | "mintNew" | "mintMore" | "setFee";
 
@@ -36,34 +38,34 @@ export default function AdminPanel() {
           <MintAdditionalInventory onBack={() => setCurrentView("main")} />
         );
       case "setFee":
-        return <SetFeeRecipient onBack={() => setCurrentView("main")} />;
+        return <SetFeeDetails onBack={() => setCurrentView("main")} />;
       default:
         return (
-          <div className="space-y-form-gap">
-            <DialogTitle className="text-2xl font-medium text-sumiBlack mb-6">
+          <div className="space-y-4">
+            <DialogTitle className="text-xl md:text-2xl font-medium text-sumiBlack">
               Admin Panel
             </DialogTitle>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <Button
-                className="w-full px-6 py-3 bg-hinokiWood text-shiroWhite rounded-form 
-                           hover:bg-kansoClay transition-form duration-form"
+                variant="primary"
+                fullWidth
                 onClick={() => setCurrentView("mintNew")}
               >
                 Mint New Token Type
               </Button>
               <Button
-                className="w-full px-6 py-3 bg-hinokiWood text-shiroWhite rounded-form 
-                           hover:bg-kansoClay transition-form duration-form"
+                variant="primary"
+                fullWidth
                 onClick={() => setCurrentView("mintMore")}
               >
                 Mint Additional Inventory
               </Button>
               <Button
-                className="w-full px-6 py-3 bg-hinokiWood text-shiroWhite rounded-form 
-                           hover:bg-kansoClay transition-form duration-form"
+                variant="primary"
+                fullWidth
                 onClick={() => setCurrentView("setFee")}
               >
-                Set Fee Recipient
+                Set Fee Details
               </Button>
             </div>
           </div>
@@ -73,20 +75,47 @@ export default function AdminPanel() {
 
   return (
     <>
-      <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
-        <div className="fixed inset-0 bg-black/20" aria-hidden="true" />
-        <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
-          <DialogPanel className="w-full max-w-lg space-y-form-gap bg-shiroWhite p-8 rounded-form shadow-form">
-            {renderContent()}
-          </DialogPanel>
-        </div>
-      </Dialog>
+      <Transition appear show={isOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={handleClose}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              aria-hidden="true"
+            />
+          </Transition.Child>
+
+          <div className="fixed inset-0 flex items-center justify-center p-3 md:p-4">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <DialogPanel className="w-full max-w-md transform overflow-hidden rounded-xl md:rounded-2xl bg-shiroWhite p-4 md:p-6 shadow-xl transition-all">
+                {renderContent()}
+              </DialogPanel>
+            </Transition.Child>
+          </div>
+        </Dialog>
+      </Transition>
 
       {ADMIN_ACCOUNTS.includes(
         ((address as `0x${string}`) || "").toLowerCase()
       ) && (
         <Button
-          className="fixed bottom-4 right-4 bg-black text-shiroWhite px-6 py-3"
+          variant="primary"
+          className="fixed bottom-4 right-4 shadow-lg"
           onClick={() => setIsOpen(!isOpen)}
         >
           Admin Panel

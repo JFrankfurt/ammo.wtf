@@ -1,6 +1,6 @@
 import { DialogTitle } from "@headlessui/react";
 import { FormInput } from "@/src/components/FormInput";
-import { Button } from "@headlessui/react";
+import { Button } from "@/src/components/Button";
 import { useAccount, useWriteContract } from "wagmi";
 import { useCallback, useState } from "react";
 import { TOKEN_ADDRESSES } from "@/src/addresses";
@@ -31,12 +31,14 @@ export function MintAdditionalInventory({ onBack }: { onBack: () => void }) {
       ],
     });
   }, [writeContract, tokenAddress, recipientAddress, amount]);
+
   if (!chainId) {
     return <div>Connect to a network</div>;
   }
+
   return (
-    <div className="space-y-form-gap">
-      <DialogTitle className="text-2xl font-medium text-sumiBlack mb-6">
+    <div className="space-y-4">
+      <DialogTitle className="text-xl md:text-2xl font-medium text-sumiBlack">
         Mint Additional Inventory
       </DialogTitle>
       <FormSelect
@@ -67,20 +69,13 @@ export function MintAdditionalInventory({ onBack }: { onBack: () => void }) {
         step="0.000000000000000001" // Allow for 18 decimal places
       />
       <div className="flex justify-between pt-4">
-        <Button
-          className="px-6 py-3 bg-ashiStone text-shiroWhite rounded-form 
-                     hover:bg-kuroganeSteel transition-form duration-form"
-          onClick={onBack}
-          disabled={isLoading}
-        >
+        <Button variant="secondary" onClick={onBack} disabled={isLoading}>
           Back
         </Button>
         <Button
+          variant="primary"
           disabled={!tokenAddress || !recipientAddress || !amount || isLoading}
           onClick={mintTokens}
-          className="px-6 py-3 bg-hinokiWood text-shiroWhite rounded-form 
-                     hover:bg-kansoClay transition-form duration-form
-                     disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? "Minting..." : "Mint Tokens"}
         </Button>
