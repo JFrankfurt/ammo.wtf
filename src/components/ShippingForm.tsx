@@ -5,6 +5,7 @@ import {
   DialogPanel,
   DialogTitle,
   Transition,
+  TransitionChild,
 } from "@headlessui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Fragment, useMemo, useState } from "react";
@@ -80,7 +81,7 @@ export const ShippingForm = ({
         version: "1.0" as const,
         origin: "marketplace-v1",
       },
-    } as FormDataWithRequiredFields,
+    },
   });
 
   // Get all tokens for the current chain
@@ -226,7 +227,7 @@ export const ShippingForm = ({
     });
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
+    <Transition show={isOpen} as={Fragment}>
       <Dialog
         as="div"
         className="relative z-50"
@@ -240,32 +241,16 @@ export const ShippingForm = ({
           }
         }}
       >
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
+        <TransitionChild as={Fragment}>
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition duration-300 data-[closed]:opacity-0"
             aria-hidden="true"
           />
-        </Transition.Child>
+        </TransitionChild>
 
         <div className="fixed inset-0 flex items-center justify-center p-3 md:p-4">
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0 scale-95"
-            enterTo="opacity-100 scale-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100 scale-100"
-            leaveTo="opacity-0 scale-95"
-          >
-            <DialogPanel className="w-full max-w-sm md:max-w-md transform overflow-hidden rounded-xl md:rounded-2xl bg-white p-4 md:p-6 shadow-xl transition-all">
+          <TransitionChild as={Fragment}>
+            <DialogPanel className="w-full max-w-sm md:max-w-md transform overflow-hidden rounded-xl md:rounded-2xl bg-white p-4 md:p-6 shadow-xl transition-all duration-300 ease-out data-[closed]:opacity-0 data-[closed]:scale-95">
               <DialogTitle
                 as="h3"
                 className="text-base md:text-lg font-medium leading-6 text-gray-900"
@@ -311,7 +296,7 @@ export const ShippingForm = ({
                 )}
               </div>
             </DialogPanel>
-          </Transition.Child>
+          </TransitionChild>
         </div>
       </Dialog>
     </Transition>

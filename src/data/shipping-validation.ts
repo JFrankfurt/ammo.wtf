@@ -58,7 +58,7 @@ export const shippingSchema = z.object({
     city: z.string().min(1).max(100),
     state: stateSchema,
     postalCode: postalCodeSchema,
-    country: z.literal("US"), // Changed from countrySchema since we only accept US
+    country: z.literal("US"),
   }),
 
   // Additional shipping preferences
