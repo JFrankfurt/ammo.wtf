@@ -6,8 +6,10 @@ interface FormSelectOption {
 interface FormSelectProps
   extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "options"> {
   label: string;
-  error?: string;
+  error?: string | { message?: string } | any;
   options: FormSelectOption[];
+  compact?: boolean;
+  placeholder?: string;
 }
 
 export function FormSelect({
@@ -15,20 +17,27 @@ export function FormSelect({
   error,
   options,
   className = "",
+  compact = false,
+  placeholder = "Select an option",
   ...props
 }: FormSelectProps) {
+  const errorMessage =
+    typeof error === "object" && error !== null ? error.message : error;
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className={`flex flex-col ${compact ? "gap-1" : "gap-2"}`}>
       <label
         htmlFor={props.id}
-        className="text-form-label font-medium text-kuroganeSteel"
+        className={`${
+          compact ? "text-sm" : "text-form-label"
+        } font-medium text-kuroganeSteel`}
       >
         {label}
       </label>
       <select
         className={`
-          h-form-input-height 
-          px-form-padding 
+          ${compact ? "h-9" : "h-form-input-height"} 
+          ${compact ? "px-3 py-1 text-sm" : "px-form-padding"} 
           border 
           border-form-input-border 
           rounded-form 
@@ -42,19 +51,23 @@ export function FormSelect({
           duration-form
           disabled:bg-form-input-disabled/10
           disabled:text-form-input-disabled
-          ${error ? "border-form-error" : ""}
+          ${errorMessage ? "border-form-error" : ""}
           ${className}
         `}
         {...props}
       >
-        <option value="">Select a token</option>
+        <option value="">{placeholder}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}
       </select>
-      {error && <span className="text-form-error text-sm">{error}</span>}
+      {errorMessage && (
+        <span className={`text-form-error ${compact ? "text-xs" : "text-sm"}`}>
+          {errorMessage}
+        </span>
+      )}
     </div>
   );
 }

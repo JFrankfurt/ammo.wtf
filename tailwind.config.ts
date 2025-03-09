@@ -37,41 +37,41 @@ const config: Config = {
         // Form-specific colors
         form: {
           input: {
-            border: "#E7E2D1",     // washiBeige
-            focus: "#8CA38F",      // matchaGreen
-            text: "#373532",       // sumiBlack
+            border: "#E7E2D1", // washiBeige
+            focus: "#8CA38F", // matchaGreen
+            text: "#373532", // sumiBlack
             placeholder: "#857F72", // wabiSabiOlive
-            disabled: "#A3A3A2",   // ashiStone
+            disabled: "#A3A3A2", // ashiStone
           },
-          label: "#555555",        // kuroganeSteel
-          error: "#C94A3D",        // akaneRed
-        }
+          label: "#555555", // kuroganeSteel
+          error: "#C94A3D", // akaneRed
+        },
       },
       spacing: {
-        'form-input-height': '3rem',
-        'form-gap': '1.5rem',
-        'form-padding': '0.75rem',
+        "form-input-height": "3rem",
+        "form-gap": "1.5rem",
+        "form-padding": "0.75rem",
       },
       borderRadius: {
-        'form': '0.375rem',
+        form: "0.375rem",
       },
       boxShadow: {
-        'form': '0 2px 4px rgba(0, 0, 0, 0.05)',
-        'form-focus': '0 0 0 2px rgba(140, 163, 143, 0.2)', // matchaGreen with opacity
+        form: "0 2px 4px rgba(0, 0, 0, 0.05)",
+        "form-focus": "0 0 0 2px rgba(140, 163, 143, 0.2)", // matchaGreen with opacity
       },
       fontSize: {
-        'form-label': ['0.875rem', '1.25rem'],
-        'form-input': ['1rem', '1.5rem'],
-        'form-error': ['0.75rem', '1rem'],
+        "form-label": ["0.875rem", "1.25rem"],
+        "form-input": ["1rem", "1.5rem"],
+        "form-error": ["0.75rem", "1rem"],
       },
       transitionProperty: {
-        'form': 'border-color, box-shadow, background-color',
+        form: "border-color, box-shadow, background-color",
       },
       transitionDuration: {
-        'form': '150ms',
+        form: "150ms",
       },
       transitionTimingFunction: {
-        'form': 'cubic-bezier(0.4, 0, 0.2, 1)',
+        form: "cubic-bezier(0.4, 0, 0.2, 1)",
       },
       keyframes: {
         bgCycle: {
@@ -82,9 +82,14 @@ const config: Config = {
           "80%": { backgroundColor: "#DB8C5C" }, // koiOrange
           "100%": { backgroundColor: "#D9D9D9" }, // loop back to kumoGray
         },
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         bgCycle: "bgCycle 60s ease-in-out infinite",
+        fadeIn: "fadeIn 0.3s ease-in-out",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",

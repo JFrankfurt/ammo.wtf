@@ -1,26 +1,33 @@
 interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
-  error?: string;
+  error?: string | { message?: string } | any;
+  compact?: boolean;
 }
 
 export function FormInput({
   label,
   error,
   className = "",
+  compact = false,
   ...props
 }: FormInputProps) {
+  const errorMessage =
+    typeof error === "object" && error !== null ? error.message : error;
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className={`flex flex-col ${compact ? "gap-1" : "gap-2"}`}>
       <label
         htmlFor={props.id}
-        className="text-form-label font-medium text-kuroganeSteel"
+        className={`${
+          compact ? "text-sm" : "text-form-label"
+        } font-medium text-kuroganeSteel`}
       >
         {label}
       </label>
       <input
         className={`
-          h-form-input-height 
-          px-form-padding 
+          ${compact ? "h-9" : "h-form-input-height"} 
+          ${compact ? "px-3 py-1 text-sm" : "px-form-padding"} 
           border 
           border-form-input-border 
           rounded-form 
@@ -35,12 +42,16 @@ export function FormInput({
           duration-form
           disabled:bg-form-input-disabled/10
           disabled:text-form-input-disabled
-          ${error ? "border-form-error" : ""}
+          ${errorMessage ? "border-form-error" : ""}
           ${className}
         `}
         {...props}
       />
-      {error && <span className="text-form-error text-sm">{error}</span>}
+      {errorMessage && (
+        <span className={`text-form-error ${compact ? "text-xs" : "text-sm"}`}>
+          {errorMessage}
+        </span>
+      )}
     </div>
   );
 }
