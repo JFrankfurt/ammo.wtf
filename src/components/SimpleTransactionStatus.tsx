@@ -1,4 +1,7 @@
 // Create a simplified version of TransactionStates for this component
+import { WalletErrorDisplay } from "./WalletErrorDisplay";
+import { getExplorerUrl } from "../utils/blockExplorer";
+
 export const SimpleTransactionStatus = ({
   isPending,
   isConfirming,
@@ -12,14 +15,14 @@ export const SimpleTransactionStatus = ({
   isConfirming: boolean;
   isConfirmed: boolean;
   isError: boolean;
-  error: string | null;
+  error: unknown;
   hash?: `0x${string}`;
   chainId?: number;
 }) => {
   if (!hash && !error && !isPending) return null;
 
   return (
-    <div className="mt-4 p-3 rounded-lg border">
+    <div>
       {isPending && (
         <div className="flex items-center text-blue-600">
           <span className="mr-2">Waiting for confirmation...</span>
@@ -34,18 +37,12 @@ export const SimpleTransactionStatus = ({
         </div>
       )}
 
-      {isError && (
-        <div className="text-red-600">
-          {error || "Transaction failed. Please try again."}
-        </div>
-      )}
+      {isError && <WalletErrorDisplay error={error} />}
 
       {hash && (
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 mt-2">
           <a
-            href={`https://${
-              chainId === 1 ? "" : "sepolia."
-            }etherscan.io/tx/${hash}`}
+            href={`${getExplorerUrl(chainId)}/tx/${hash}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:underline"

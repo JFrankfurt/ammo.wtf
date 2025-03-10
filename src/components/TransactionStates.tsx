@@ -1,17 +1,20 @@
 import { useWaitForTransactionReceipt } from "wagmi";
 import { Button } from "./Button";
 import { getExplorerUrl } from "../utils/blockExplorer";
+import { WalletErrorDisplay } from "./WalletErrorDisplay";
 
 interface TransactionStatesProps {
   hash: `0x${string}` | undefined;
   onClose: () => void;
   chainId: number;
+  error?: unknown;
 }
 
 export const TransactionStates = ({
   hash,
   onClose,
   chainId,
+  error,
 }: TransactionStatesProps) => {
   const { isLoading, isSuccess, isError } = useWaitForTransactionReceipt({
     hash,
@@ -27,6 +30,12 @@ export const TransactionStates = ({
           </p>
           <div className="flex justify-center">
             <span className="animate-spin">⏳</span>
+          </div>
+          {error ? <WalletErrorDisplay error={error} /> : null}
+          <div className="flex justify-end">
+            <Button onClick={onClose} variant="primary">
+              Close
+            </Button>
           </div>
         </div>
       </div>
@@ -95,9 +104,9 @@ export const TransactionStates = ({
           <h3 className="font-medium text-lg text-red-600">
             Transaction Failed
           </h3>
-          <p className="text-gray-600">
-            There was an error processing your transaction.
-          </p>
+          <WalletErrorDisplay
+            error={error || "Transaction failed to process"}
+          />
           <div className="text-center">
             <a
               href={`${getExplorerUrl(chainId)}/tx/${hash}`}

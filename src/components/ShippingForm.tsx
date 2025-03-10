@@ -56,8 +56,10 @@ export const ShippingForm = ({
     handleSubmit,
     formState: { errors },
     reset,
+    getValues,
   } = useForm<FormDataWithRequiredFields>({
     resolver: zodResolver(shippingSchema),
+    mode: "onChange",
     defaultValues: {
       recipient: {
         name: "",
@@ -248,17 +250,44 @@ export const ShippingForm = ({
           />
         </TransitionChild>
 
-        <div className="fixed inset-0 flex items-center justify-center p-3 md:p-4">
+        {/* Full screen container with scrolling */}
+        <div className="fixed inset-0 flex flex-col items-center justify-start overflow-y-auto p-3 md:p-4 lg:p-6">
           <TransitionChild as={Fragment}>
-            <DialogPanel className="w-full max-w-sm md:max-w-md transform overflow-hidden rounded-xl md:rounded-2xl bg-white p-4 md:p-6 shadow-xl transition-all duration-300 ease-out data-[closed]:opacity-0 data-[closed]:scale-95">
-              <DialogTitle
-                as="h3"
-                className="text-base md:text-lg font-medium leading-6 text-gray-900"
-              >
-                {step === "contents"
-                  ? "Select Ammunition to Ship"
-                  : "Shipping Information"}
-              </DialogTitle>
+            <DialogPanel className="w-full max-w-md md:max-w-lg lg:max-w-xl transform overflow-auto rounded-xl md:rounded-2xl bg-white p-4 md:p-6 shadow-xl transition-all duration-300 ease-out data-[closed]:opacity-0 data-[closed]:scale-95 my-4 md:my-8">
+              <div className="flex justify-between items-center mb-4">
+                <DialogTitle
+                  as="h3"
+                  className="text-base md:text-lg font-medium leading-6 text-gray-900"
+                >
+                  {step === "contents"
+                    ? "Select Ammunition to Ship"
+                    : "Shipping Information"}
+                </DialogTitle>
+
+                {/* Close button */}
+                {!isSubmitting && !isConfirming && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                    aria-label="Close"
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
               <div className="mt-3 md:mt-4">
                 {step === "contents" ? (
@@ -274,7 +303,10 @@ export const ShippingForm = ({
                     hasSelectedQuantities={hasSelectedQuantities}
                   />
                 ) : (
-                  <form onSubmit={handleSubmit(onSubmit, onError)}>
+                  <form
+                    onSubmit={handleSubmit(onSubmit, onError)}
+                    className="space-y-4"
+                  >
                     <ShippingFormAddress
                       register={register}
                       errors={errors}
