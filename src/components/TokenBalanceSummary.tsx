@@ -5,12 +5,14 @@ import { getTokensForChain, type TokenInfo } from "../addresses";
 import { useTokenBalances } from "../hooks/useTokenBalances";
 
 interface TokenBalanceSummaryProps {
-  onShip: (token: TokenInfo) => void;
+  onTokenAction: (token: TokenInfo, action: "ship" | "purchase") => void;
 }
 
 type SortOption = "name" | "quantity" | "value";
 
-export const TokenBalanceSummary = ({ onShip }: TokenBalanceSummaryProps) => {
+export const TokenBalanceSummary = ({
+  onTokenAction,
+}: TokenBalanceSummaryProps) => {
   const { chainId, address } = useAccount();
   const [expandedView, setExpandedView] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
@@ -69,15 +71,43 @@ export const TokenBalanceSummary = ({ onShip }: TokenBalanceSummaryProps) => {
   const tokensPerPage = expandedView
     ? TOKENS_PER_PAGE_EXPANDED
     : TOKENS_PER_PAGE_COLLAPSED;
-  const totalPages = Math.max(
+
+  // Calculate total pages for both inventory and available tokens
+  const inventoryTotalPages = Math.max(
     1,
     Math.ceil(tokensWithBalance.length / tokensPerPage)
   );
 
+  const availableTotalPages = Math.max(
+    1,
+    Math.ceil(tokens.length / tokensPerPage)
+  );
+
+  // Use the appropriate total pages based on context
+  const totalPages =
+    tokensWithBalance.length === 0 && !searchTerm
+      ? availableTotalPages
+      : inventoryTotalPages;
+
   // Get current page tokens
   const startIndex = currentPage * tokensPerPage;
   const endIndex = startIndex + tokensPerPage;
-  const currentTokens = tokensWithBalance.slice(startIndex, endIndex);
+  const currentInventoryTokens = tokensWithBalance.slice(startIndex, endIndex);
+
+  // Filter available tokens for the empty state
+  const availableTokens = useMemo(() => {
+    if (!searchTerm) return tokens;
+    const term = searchTerm.toLowerCase();
+    return tokens.filter(
+      (token) =>
+        token.name.toLowerCase().includes(term) ||
+        token.symbol.toLowerCase().includes(term) ||
+        token.caliber?.toLowerCase().includes(term) ||
+        token.category?.toLowerCase().includes(term)
+    );
+  }, [tokens, searchTerm]);
+
+  const currentAvailableTokens = availableTokens.slice(startIndex, endIndex);
 
   // Handle pagination
   const goToNextPage = () => {
@@ -120,7 +150,7 @@ export const TokenBalanceSummary = ({ onShip }: TokenBalanceSummaryProps) => {
   }
 
   if (tokensWithBalance.length === 0 && !searchTerm) {
-    // New default state for first-time users
+    // Empty inventory state - show available tokens to buy
     return (
       <div className="space-y-2 md:space-y-3">
         <div className="bg-gray-50 rounded-lg p-3 md:p-4 border border-gray-100">
@@ -142,7 +172,7 @@ export const TokenBalanceSummary = ({ onShip }: TokenBalanceSummaryProps) => {
             </div>
             <p className="text-xs md:text-sm text-gray-600 max-w-md">
               Your inventory is empty. Browse available ammunition below and
-              click &quot;Buy&quot; to add to your inventory.
+              click &quot;Purchase&quot; to add to your inventory.
             </p>
           </div>
         </div>
@@ -213,7 +243,8 @@ export const TokenBalanceSummary = ({ onShip }: TokenBalanceSummaryProps) => {
             </button>
           </div>
           <span className="text-xs text-gray-500">
-            {tokens.length} {tokens.length === 1 ? "type" : "types"}
+            {availableTokens.length}{" "}
+            {availableTokens.length === 1 ? "type" : "types"}
           </span>
         </div>
 
@@ -225,67 +256,53 @@ export const TokenBalanceSummary = ({ onShip }: TokenBalanceSummaryProps) => {
               : "grid-cols-1 space-y-2"
           }`}
         >
-          {tokens
-            .filter((token) => {
-              if (!searchTerm) return true;
-              const term = searchTerm.toLowerCase();
-              return (
-                token.name.toLowerCase().includes(term) ||
-                token.symbol.toLowerCase().includes(term) ||
-                token.caliber?.toLowerCase().includes(term) ||
-                token.category?.toLowerCase().includes(term)
-              );
-            })
-            .slice(startIndex, endIndex)
-            .map((token) => (
-              <div
-                key={token.address}
-                className="bg-gray-50 rounded-lg p-2 md:p-3 border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all cursor-pointer group"
-                onClick={() => onShip(token)}
-              >
-                <div className="flex justify-between items-center gap-1 md:gap-2">
-                  <div className="flex items-start gap-1.5 md:gap-2">
-                    {token.icon ? (
-                      <Image
-                        src={token.icon}
-                        alt={token.symbol}
-                        className="w-8 h-8 md:w-10 md:h-10"
-                        width={40}
-                        height={40}
-                      />
-                    ) : (
-                      <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs md:text-sm">
-                        {token.symbol.slice(0, 2)}
-                      </div>
-                    )}
-                    <div className="">
-                      <div className="font-medium text-xs md:text-sm text-gray-800 group-hover:text-blue-700 transition-colors truncate">
-                        {token.symbol}
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {token.category && token.caliber && (
-                          <span className="block sm:inline">
-                            {token.caliber}
-                          </span>
-                        )}
-                        {token.priceUsd && (
-                          <span className="text-xs text-gray-500 block sm:inline sm:ml-1">
-                            ${token.priceUsd.toFixed(2)}/round
-                          </span>
-                        )}
-                      </div>
+          {currentAvailableTokens.map((token) => (
+            <div
+              key={token.address}
+              className="bg-gray-50 rounded-lg p-2 md:p-3 border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all cursor-pointer group"
+              onClick={() => onTokenAction(token, "purchase")}
+            >
+              <div className="flex justify-between items-center gap-1 md:gap-2">
+                <div className="flex items-start gap-1.5 md:gap-2">
+                  {token.icon ? (
+                    <Image
+                      src={token.icon}
+                      alt={token.symbol}
+                      className="w-8 h-8 md:w-10 md:h-10"
+                      width={40}
+                      height={40}
+                    />
+                  ) : (
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs md:text-sm">
+                      {token.symbol.slice(0, 2)}
+                    </div>
+                  )}
+                  <div className="max-w-[calc(100%-2.5rem)] md:max-w-[calc(100%-3.5rem)]">
+                    <div className="font-medium text-xs md:text-sm text-gray-800 group-hover:text-blue-700 transition-colors truncate">
+                      {token.symbol}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {token.category && token.caliber && (
+                        <span className="block sm:inline">{token.caliber}</span>
+                      )}
+                      {token.priceUsd && (
+                        <span className="text-xs text-gray-500 block sm:inline sm:ml-1">
+                          ${token.priceUsd.toFixed(2)}/round
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="text-blue-600 text-xs md:text-sm opacity-80 group-hover:opacity-100 transition-opacity">
-                    Buy →
-                  </div>
+                </div>
+                <div className="text-blue-600 text-xs md:text-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                  Purchase →
                 </div>
               </div>
-            ))}
+            </div>
+          ))}
         </div>
 
         {/* Pagination and View Controls */}
-        {tokens.length > TOKENS_PER_PAGE_COLLAPSED && (
+        {availableTokens.length > TOKENS_PER_PAGE_COLLAPSED && (
           <div className="flex items-center justify-between mt-2 md:mt-3 pt-2 border-t border-gray-100">
             <div className="flex items-center space-x-1 md:space-x-2">
               <button
@@ -459,11 +476,11 @@ export const TokenBalanceSummary = ({ onShip }: TokenBalanceSummaryProps) => {
               : "grid-cols-1 space-y-2"
           }`}
         >
-          {currentTokens.map((token) => (
+          {currentInventoryTokens.map((token) => (
             <div
               key={token.address}
               className="bg-gray-50 rounded-lg p-2 md:p-3 border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all cursor-pointer group"
-              onClick={() => onShip(token)}
+              onClick={() => onTokenAction(token, "ship")}
             >
               <div className="flex justify-between items-center gap-1 md:gap-2">
                 <div className="flex items-start gap-1.5 md:gap-2">

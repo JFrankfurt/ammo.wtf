@@ -115,7 +115,7 @@ const ConnectedAccountTokenInfo = () => {
                 </div>
               </div>
 
-              <TokenBalanceSummary onShip={openShippingForm} />
+              <TokenBalanceSummary onTokenAction={handleSelectToken} />
 
               <div className="flex flex-col sm:flex-row justify-between mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-100 gap-2 sm:gap-4">
                 <Button
