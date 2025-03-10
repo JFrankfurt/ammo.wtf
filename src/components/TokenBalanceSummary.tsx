@@ -120,28 +120,229 @@ export const TokenBalanceSummary = ({ onShip }: TokenBalanceSummaryProps) => {
   }
 
   if (tokensWithBalance.length === 0 && !searchTerm) {
+    // New default state for first-time users
     return (
-      <div className="bg-gray-50 rounded-lg p-3 md:p-4 text-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg
-              className="w-5 h-5 md:w-6 md:h-6 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M20 12H4M8 16l-4-4 4-4"
-              />
-            </svg>
+      <div className="space-y-2 md:space-y-3">
+        <div className="bg-gray-50 rounded-lg p-3 md:p-4 border border-gray-100">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg
+                className="w-4 h-4 md:w-5 md:h-5 text-gray-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <p className="text-xs md:text-sm text-gray-600 max-w-md">
+              Your inventory is empty. Browse available ammunition below and
+              click &quot;Buy&quot; to add to your inventory.
+            </p>
           </div>
-          <p className="text-xs md:text-sm text-gray-500">
-            Select &quot;View All&quot; to see available ammunition
-          </p>
         </div>
+
+        {/* Search Input for Available Ammunition */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search ammunition..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-2 md:right-3 top-1.5 md:top-2.5 text-gray-400 hover:text-gray-600"
+            >
+              <svg
+                className="w-3 h-3 md:w-4 md:h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Sort Options */}
+        <div className="flex justify-between items-center">
+          <div className="flex space-x-1 text-xs">
+            <button
+              onClick={() => handleSortChange("name")}
+              className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
+                sortBy === "name"
+                  ? "bg-blue-100 text-blue-700 font-medium"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              Name
+            </button>
+            <button
+              onClick={() => handleSortChange("quantity")}
+              className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
+                sortBy === "quantity"
+                  ? "bg-blue-100 text-blue-700 font-medium"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              Price
+            </button>
+            <button
+              onClick={() => handleSortChange("value")}
+              className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
+                sortBy === "value"
+                  ? "bg-blue-100 text-blue-700 font-medium"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              Category
+            </button>
+          </div>
+          <span className="text-xs text-gray-500">
+            {tokens.length} {tokens.length === 1 ? "type" : "types"}
+          </span>
+        </div>
+
+        {/* Available Ammunition Grid */}
+        <div
+          className={`grid ${
+            expandedView
+              ? "grid-cols-1 sm:grid-cols-2 gap-2"
+              : "grid-cols-1 space-y-2"
+          }`}
+        >
+          {tokens
+            .filter((token) => {
+              if (!searchTerm) return true;
+              const term = searchTerm.toLowerCase();
+              return (
+                token.name.toLowerCase().includes(term) ||
+                token.symbol.toLowerCase().includes(term) ||
+                token.caliber?.toLowerCase().includes(term) ||
+                token.category?.toLowerCase().includes(term)
+              );
+            })
+            .slice(startIndex, endIndex)
+            .map((token) => (
+              <div
+                key={token.address}
+                className="bg-gray-50 rounded-lg p-2 md:p-3 border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all cursor-pointer group"
+                onClick={() => onShip(token)}
+              >
+                <div className="flex justify-between items-center gap-1 md:gap-2">
+                  <div className="flex items-start gap-1.5 md:gap-2">
+                    {token.icon ? (
+                      <Image
+                        src={token.icon}
+                        alt={token.symbol}
+                        className="w-8 h-8 md:w-10 md:h-10"
+                        width={40}
+                        height={40}
+                      />
+                    ) : (
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs md:text-sm">
+                        {token.symbol.slice(0, 2)}
+                      </div>
+                    )}
+                    <div className="">
+                      <div className="font-medium text-xs md:text-sm text-gray-800 group-hover:text-blue-700 transition-colors truncate">
+                        {token.symbol}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        {token.category && token.caliber && (
+                          <span className="block sm:inline">
+                            {token.caliber}
+                          </span>
+                        )}
+                        {token.priceUsd && (
+                          <span className="text-xs text-gray-500 block sm:inline sm:ml-1">
+                            ${token.priceUsd.toFixed(2)}/round
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-blue-600 text-xs md:text-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                    Buy →
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+
+        {/* Pagination and View Controls */}
+        {tokens.length > TOKENS_PER_PAGE_COLLAPSED && (
+          <div className="flex items-center justify-between mt-2 md:mt-3 pt-2 border-t border-gray-100">
+            <div className="flex items-center space-x-1 md:space-x-2">
+              <button
+                onClick={goToPrevPage}
+                disabled={totalPages <= 1}
+                className="p-0.5 md:p-1 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Previous page"
+              >
+                <svg
+                  className="w-4 h-4 md:w-5 md:h-5 text-gray-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+
+              <span className="text-xs text-gray-500">
+                {currentPage + 1}/{totalPages}
+              </span>
+
+              <button
+                onClick={goToNextPage}
+                disabled={totalPages <= 1}
+                className="p-0.5 md:p-1 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Next page"
+              >
+                <svg
+                  className="w-4 h-4 md:w-5 md:h-5 text-gray-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <button
+              onClick={toggleExpandedView}
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+            >
+              {expandedView ? "Collapse View" : "Expand View"}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -297,7 +498,7 @@ export const TokenBalanceSummary = ({ onShip }: TokenBalanceSummaryProps) => {
                     </div>
                   </div>
                 </div>
-                <div className="text-blue-600 text-xs md:text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="text-blue-600 text-xs md:text-sm opacity-80 group-hover:opacity-100 transition-opacity">
                   Ship →
                 </div>
               </div>
