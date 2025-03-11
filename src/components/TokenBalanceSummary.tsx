@@ -3,6 +3,7 @@ import { useAccount } from "wagmi";
 import { useState, useMemo } from "react";
 import { getTokensForChain, type TokenInfo } from "../addresses";
 import { useTokenBalances } from "../hooks/useTokenBalances";
+import { TokenPriceDisplay } from "./TokenPriceDisplay";
 
 interface TokenBalanceSummaryProps {
   onTokenAction: (token: TokenInfo, action: "ship" | "purchase") => void;
@@ -285,11 +286,7 @@ export const TokenBalanceSummary = ({
                       {token.category && token.caliber && (
                         <span className="block sm:inline">{token.caliber}</span>
                       )}
-                      {token.priceUsd && (
-                        <span className="text-xs text-gray-500 block sm:inline sm:ml-1">
-                          ${token.priceUsd.toFixed(2)}/round
-                        </span>
-                      )}
+                      <TokenPriceDisplay token={token} amount={1} />
                     </div>
                   </div>
                 </div>

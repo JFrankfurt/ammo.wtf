@@ -125,8 +125,8 @@ const UNIVERSAL_ROUTER_ADDRESS: Record<number, `0x${string}`> = {
 
 // Define the Pool Manager address
 const POOL_MANAGER_ADDRESS: Record<number, `0x${string}`> = {
-  [base.id]: "0x64255ed21366DB9D97A8Aa6314935CA0F8D6a46C" as `0x${string}`,
-  [sepolia.id]: "0x64255ed21366DB9D97A8Aa6314935CA0F8D6a46C" as `0x${string}`,
+  [base.id]: "0x498581ff718922c3f8e6a244956af099b2652b2b" as `0x${string}`,
+  [sepolia.id]: "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543" as `0x${string}`,
 };
 
 export type { TokenInfo };
