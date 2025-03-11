@@ -263,7 +263,7 @@ export const TokenBalanceSummary = ({
               onClick={() => onTokenAction(token, "purchase")}
             >
               <div className="flex justify-between items-center gap-1 md:gap-2">
-                <div className="flex items-start gap-1.5 md:gap-2">
+                <div className="flex items-start gap-1.5 md:gap-2 flex-grow">
                   {token.icon ? (
                     <Image
                       src={token.icon}
@@ -483,7 +483,7 @@ export const TokenBalanceSummary = ({
               onClick={() => onTokenAction(token, "ship")}
             >
               <div className="flex justify-between items-center gap-1 md:gap-2">
-                <div className="flex items-start gap-1.5 md:gap-2">
+                <div className="flex items-start gap-1.5 md:gap-2 flex-grow">
                   {token.icon ? (
                     <Image
                       src={token.icon}
