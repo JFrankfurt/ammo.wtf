@@ -6,7 +6,6 @@ interface TokenInfo {
   symbol: string;
   category?: string; // e.g., "rifle", "pistol", "shotgun"
   caliber?: string; // e.g., "5.56mm", "9mm"
-  priceUsd?: number; // Price in USD
   imageUrl?: string; // URL to token image
   description?: string; // Detailed description
   weight?: number; // Weight in grains
@@ -26,7 +25,6 @@ const TEST_556_TOKEN_ADDRESS: Record<number, TokenInfo> = {
     symbol: "5.56",
     category: "rifle",
     caliber: "5.56mm",
-    priceUsd: 0.3,
     description: "Standard NATO rifle ammunition",
     weight: 77,
     manufacturer: "Bone Frog Ammunition™",
@@ -37,7 +35,6 @@ const TEST_556_TOKEN_ADDRESS: Record<number, TokenInfo> = {
     symbol: "B556BMB77",
     category: "rifle",
     caliber: "5.56mm",
-    priceUsd: 0.3,
     description: "77GR Barnes Match Burner OTM BT rifle ammunition",
     weight: 77,
     manufacturer: "Bone Frog Ammunition™",
@@ -51,7 +48,6 @@ const HST_9MM_TOKEN_ADDRESS: Record<number, TokenInfo> = {
     symbol: "9MM",
     category: "pistol",
     caliber: "9mm",
-    priceUsd: 0.35,
     description: "Standard 9mm Luger pistol ammunition",
     weight: 147,
     manufacturer: "Federal",
@@ -62,7 +58,6 @@ const HST_9MM_TOKEN_ADDRESS: Record<number, TokenInfo> = {
     symbol: "P9HST2S",
     category: "pistol",
     caliber: "9mm",
-    priceUsd: 0.35,
     description: "Personal Defense HST 9mm Luger 147 Grain pistol ammunition",
     weight: 147,
     manufacturer: "Federal",
