@@ -9,7 +9,7 @@ import {
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import AMMO_TOKEN_ERC20_ABI from "../abi/ammoTokenERC20";
 import { UNIVERSAL_ROUTER_ABI } from "../abi/universalRouter";
-import { UNIVERSAL_ROUTER_ADDRESS, USDC_ADDRESS } from "../addresses";
+import { SWAP_ROUTER_02_ADDRESS, USDC_ADDRESS } from "../addresses";
 
 export interface SwapState {
   loading: boolean;
@@ -204,7 +204,7 @@ export function useUniswapSwap(chainId: number) {
 
         // Simulate the contract call using publicClient directly for the quote
         await publicClient.simulateContract({
-          address: UNIVERSAL_ROUTER_ADDRESS[chainId],
+          address: SWAP_ROUTER_02_ADDRESS[chainId],
           abi: UNIVERSAL_ROUTER_ABI,
           functionName: "execute",
           args: [commands, inputs, deadline],
@@ -242,7 +242,7 @@ export function useUniswapSwap(chainId: number) {
           address: tokenAddress as `0x${string}`,
           abi: AMMO_TOKEN_ERC20_ABI,
           functionName: "allowance",
-          args: [address, UNIVERSAL_ROUTER_ADDRESS[chainId]],
+          args: [address, SWAP_ROUTER_02_ADDRESS[chainId]],
         })) as bigint;
 
         // If allowance is insufficient, approve
@@ -251,7 +251,7 @@ export function useUniswapSwap(chainId: number) {
             address: tokenAddress as `0x${string}`,
             abi: AMMO_TOKEN_ERC20_ABI,
             functionName: "approve",
-            args: [UNIVERSAL_ROUTER_ADDRESS[chainId], BigInt(amount)],
+            args: [SWAP_ROUTER_02_ADDRESS[chainId], BigInt(amount)],
             account: address,
           });
 
@@ -296,7 +296,7 @@ export function useUniswapSwap(chainId: number) {
 
         // Execute the swap using the wallet client
         const txHash = await walletClient.writeContract({
-          address: UNIVERSAL_ROUTER_ADDRESS[chainId],
+          address: SWAP_ROUTER_02_ADDRESS[chainId],
           abi: UNIVERSAL_ROUTER_ABI,
           functionName: "execute",
           args: [commands, inputs, deadline],

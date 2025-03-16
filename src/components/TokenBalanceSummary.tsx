@@ -1,9 +1,12 @@
 import Image from "next/image";
+import { sepolia } from "viem/chains";
 import { useAccount } from "wagmi";
 import { useState, useMemo } from "react";
 import { getTokensForChain, type TokenInfo } from "../addresses";
 import { useTokenBalances } from "../hooks/useTokenBalances";
 import { TokenPriceDisplay } from "./TokenPriceDisplay";
+import { TokenPropertyChip } from "./TokenPropertyChip";
+import { fallbackChainId } from "../utils/chains";
 
 interface TokenBalanceSummaryProps {
   onTokenAction: (token: TokenInfo, action: "ship" | "purchase") => void;
@@ -22,7 +25,7 @@ export const TokenBalanceSummary = ({
 
   // Get all tokens for the current chain
   const tokens = useMemo(
-    () => (chainId ? getTokensForChain(chainId) : []),
+    () => getTokensForChain(chainId ?? fallbackChainId),
     [chainId]
   );
 
@@ -172,8 +175,8 @@ export const TokenBalanceSummary = ({
               </svg>
             </div>
             <p className="text-xs md:text-sm text-gray-600 max-w-md">
-              Your inventory is empty. Browse available ammunition below and
-              click &quot;Purchase&quot; to add to your inventory.
+              Browse available ammunition below and click &quot;Purchase&quot;
+              to buy on Uniswap.
             </p>
           </div>
         </div>
@@ -260,11 +263,11 @@ export const TokenBalanceSummary = ({
           {currentAvailableTokens.map((token) => (
             <div
               key={token.address}
-              className="bg-gray-50 rounded-lg p-2 md:p-3 border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all cursor-pointer group"
+              className="flex flex-col bg-gray-50 rounded-lg p-2 border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all cursor-pointer group"
               onClick={() => onTokenAction(token, "purchase")}
             >
-              <div className="flex justify-between items-center gap-1 md:gap-2">
-                <div className="flex items-start gap-1.5 md:gap-2 flex-grow">
+              <div className="flex flex-col gap-1">
+                <div className="flex flex-rowgap-1 md:gap-2">
                   {token.icon ? (
                     <Image
                       src={token.icon}
@@ -278,19 +281,34 @@ export const TokenBalanceSummary = ({
                       {token.symbol.slice(0, 2)}
                     </div>
                   )}
-                  <div className="max-w-[calc(100%-2.5rem)] md:max-w-[calc(100%-3.5rem)]">
-                    <div className="font-medium text-xs md:text-sm text-gray-800 group-hover:text-blue-700 transition-colors truncate">
-                      {token.symbol}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {token.category && token.caliber && (
-                        <span className="block sm:inline">{token.caliber}</span>
-                      )}
-                      <TokenPriceDisplay token={token} amount={1} />
-                    </div>
-                  </div>
+                  <span className="font-medium text-gray-800 group-hover:text-blue-700 transition-colors">
+                    {token.name}
+                  </span>
                 </div>
-                <div className="text-blue-600 text-xs md:text-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                <TokenPriceDisplay token={token} />
+              </div>
+
+              <div className="flex flex-row justify-between items-end gap-1.5">
+                {/* Token property chips */}
+                <div className="flex flex-wrap gap-1.5 my-1.5">
+                  {token.category && (
+                    <TokenPropertyChip type="category" value={token.category} />
+                  )}
+                  {token.caliber && (
+                    <TokenPropertyChip type="caliber" value={token.caliber} />
+                  )}
+                  {token.weight && (
+                    <TokenPropertyChip type="weight" value={token.weight} />
+                  )}
+                  {token.manufacturer && (
+                    <TokenPropertyChip
+                      type="manufacturer"
+                      value={token.manufacturer}
+                    />
+                  )}
+                </div>
+
+                <div className="text-blue-600 text-xs md:text-sm opacity-80 group-hover:opacity-100 transition-opacity self-end w-[30%] text-right">
                   Purchase →
                 </div>
               </div>
@@ -508,6 +526,31 @@ export const TokenBalanceSummary = ({
                           )}
                           )
                         </span>
+                      )}
+                    </div>
+
+                    {/* Token property chips */}
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {token.category && (
+                        <TokenPropertyChip
+                          type="category"
+                          value={token.category}
+                        />
+                      )}
+                      {token.caliber && (
+                        <TokenPropertyChip
+                          type="caliber"
+                          value={token.caliber}
+                        />
+                      )}
+                      {token.weight && (
+                        <TokenPropertyChip type="weight" value={token.weight} />
+                      )}
+                      {token.manufacturer && (
+                        <TokenPropertyChip
+                          type="manufacturer"
+                          value={token.manufacturer}
+                        />
                       )}
                     </div>
                   </div>

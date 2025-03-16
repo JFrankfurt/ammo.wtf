@@ -3,6 +3,7 @@ import { useUniswap } from "../hooks";
 import { useAccount, useBalance } from "wagmi";
 import { USDC_ADDRESS } from "../addresses";
 import { FormInput } from "./FormInput";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 
 interface UniswapSwapProps {
   tokenAddress: string; // The token address that the component was opened from
@@ -20,7 +21,8 @@ export function UniswapSwap({
   onError,
 }: UniswapSwapProps) {
   // Get the current network
-  const { chain, address } = useAccount();
+  const { chain, address, isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
   const chainId = chain?.id || 1; // Default to Ethereum Mainnet
 
   // Get USDC balance
@@ -114,6 +116,15 @@ export function UniswapSwap({
     } catch (error) {
       console.error("Error executing swap:", error);
       if (onError && error instanceof Error) onError(error);
+    }
+  };
+
+  // Handle button click based on connection status
+  const handleButtonClick = () => {
+    if (!isConnected) {
+      openConnectModal?.();
+    } else {
+      handleSwap();
     }
   };
 
@@ -217,12 +228,18 @@ export function UniswapSwap({
         {/* Action Button */}
         <button
           className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-          onClick={handleSwap}
+          onClick={handleButtonClick}
           disabled={
-            state.loading || !amount || !state.quote || parseFloat(amount) <= 0
+            isConnected &&
+            (state.loading ||
+              !amount ||
+              !state.quote ||
+              parseFloat(amount) <= 0)
           }
         >
-          {state.loading ? (
+          {!isConnected ? (
+            "Connect Wallet"
+          ) : state.loading ? (
             <div className="flex items-center justify-center">
               <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
                 <circle

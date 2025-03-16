@@ -1,6 +1,6 @@
 "use client";
 
-import { Text, useGLTF } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Physics,

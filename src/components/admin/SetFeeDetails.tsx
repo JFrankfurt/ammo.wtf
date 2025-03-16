@@ -4,8 +4,8 @@ import { Button } from "@/src/components/Button";
 import { FormInput } from "@/src/components/FormInput";
 import { getExplorerUrl } from "@/src/utils/blockExplorer";
 import { DialogTitle } from "@headlessui/react";
+import { fallbackChainId } from "@/src/utils/chains";
 import { useCallback, useEffect, useState } from "react";
-import { base } from "viem/chains";
 import {
   useAccount,
   useReadContract,
@@ -31,7 +31,7 @@ export function SetFeeDetails({ onBack }: { onBack: () => void }) {
   const { chainId } = useAccount();
 
   const { data: feeDetails, refetch: refetchFeeDetails } = useReadContract({
-    address: FACTORY_ADDRESS[chainId ?? base.id],
+    address: FACTORY_ADDRESS[chainId ?? fallbackChainId],
     abi: ammoFactoryABI,
     functionName: "getFeeDetails",
   });
@@ -103,7 +103,7 @@ export function SetFeeDetails({ onBack }: { onBack: () => void }) {
 
     writeContract(
       {
-        address: FACTORY_ADDRESS[chainId ?? base.id],
+        address: FACTORY_ADDRESS[chainId ?? fallbackChainId],
         abi: ammoFactoryABI,
         functionName: "setFeeDetails",
         args: [recipientAddress as `0x${string}`, feePercentageBigInt],

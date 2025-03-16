@@ -1,24 +1,11 @@
-import { useCallback, useState } from "react";
-import { encodeFunctionData, formatUnits, parseUnits } from "viem";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
-import { UNIVERSAL_ROUTER_ABI } from "../abi/universalRouter";
-import {
-  USDC_ADDRESS,
-  UNIVERSAL_ROUTER_ADDRESS,
-  POOL_MANAGER_ADDRESS,
-} from "../addresses";
-import { ERC20_ABI } from "../abi/erc20";
-import { UNISWAP_V4_POOL_MANAGER_ABI } from "../abi/uniswapV4PoolManager";
-import {
-  TradeType,
-  Percent,
-  Currency,
-  Token,
-  CurrencyAmount,
-} from "@uniswap/sdk-core";
 import { Trade as RouterTrade } from "@uniswap/router-sdk";
-import { SwapRouter, SwapOptions } from "@uniswap/universal-router-sdk";
-import { Pool as V4Pool, PoolKey } from "@uniswap/v4-sdk";
+import { Currency, CurrencyAmount, Token, TradeType } from "@uniswap/sdk-core";
+import { useCallback, useState } from "react";
+import { formatUnits, parseUnits } from "viem";
+import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { ERC20_ABI } from "../abi/erc20";
+import { UNIVERSAL_ROUTER_ABI } from "../abi/universalRouter";
+import { SWAP_ROUTER_02_ADDRESS } from "../addresses";
 
 // Define the state interface
 export interface SwapState {
@@ -245,7 +232,7 @@ export function useUniswap(chainId: number) {
           address: tokenAddress as `0x${string}`,
           abi: ERC20_ABI,
           functionName: "allowance",
-          args: [address, UNIVERSAL_ROUTER_ADDRESS[chainId]],
+          args: [address, SWAP_ROUTER_02_ADDRESS[chainId]],
         })) as bigint;
 
         // If allowance is sufficient, return true
@@ -258,7 +245,7 @@ export function useUniswap(chainId: number) {
           address: tokenAddress as `0x${string}`,
           abi: ERC20_ABI,
           functionName: "approve",
-          args: [UNIVERSAL_ROUTER_ADDRESS[chainId], parsedAmount],
+          args: [SWAP_ROUTER_02_ADDRESS[chainId], parsedAmount],
           account: address,
         });
 
@@ -323,7 +310,7 @@ export function useUniswap(chainId: number) {
         // Execute a simple swap directly using the Universal Router
         // This is a placeholder - in a real implementation, we would use the proper encoded calldata
         const hash = await walletClient.writeContract({
-          address: UNIVERSAL_ROUTER_ADDRESS[chainId],
+          address: SWAP_ROUTER_02_ADDRESS[chainId],
           abi: UNIVERSAL_ROUTER_ABI,
           functionName: "execute",
           args: [

@@ -1,16 +1,17 @@
+import { CHAIN_TO_ADDRESSES_MAP } from "@uniswap/sdk-core";
 import { base, sepolia } from "viem/chains";
 
 interface TokenInfo {
   address: string;
   name: string;
   symbol: string;
-  category?: string; // e.g., "rifle", "pistol", "shotgun"
-  caliber?: string; // e.g., "5.56mm", "9mm"
-  imageUrl?: string; // URL to token image
-  description?: string; // Detailed description
-  weight?: number; // Weight in grains
-  manufacturer?: string; // Manufacturer name
-  icon?: string; // URL to token icon
+  category?: string;
+  caliber?: string;
+  imageUrl?: string;
+  description?: string;
+  weight?: number;
+  manufacturer?: string;
+  icon?: string;
 }
 
 const FACTORY_ADDRESS: Record<number, `0x${string}`> = {
@@ -113,16 +114,22 @@ const USDC_ADDRESS: Record<number, `0x${string}`> = {
 };
 
 // Define the Universal Router address
-const UNIVERSAL_ROUTER_ADDRESS: Record<number, `0x${string}`> = {
-  [base.id]: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD" as `0x${string}`,
-  [sepolia.id]: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD" as `0x${string}`,
+const SWAP_ROUTER_02_ADDRESS: Record<number, `0x${string}`> = {
+  [base.id]: CHAIN_TO_ADDRESSES_MAP[base.id]
+    .swapRouter02Address as `0x${string}`,
+  [sepolia.id]: CHAIN_TO_ADDRESSES_MAP[sepolia.id]
+    .swapRouter02Address as `0x${string}`,
 };
 
 // Define the Pool Manager address
 const POOL_MANAGER_ADDRESS: Record<number, `0x${string}`> = {
-  [base.id]: "0x498581ff718922c3f8e6a244956af099b2652b2b" as `0x${string}`,
-  [sepolia.id]: "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543" as `0x${string}`,
+  [base.id]: CHAIN_TO_ADDRESSES_MAP[base.id]
+    .v4PoolManagerAddress as `0x${string}`,
+  [sepolia.id]: CHAIN_TO_ADDRESSES_MAP[sepolia.id]
+    .v4PoolManagerAddress as `0x${string}`,
 };
+
+
 
 export type { TokenInfo };
 
@@ -135,6 +142,6 @@ export {
   POOL_MANAGER_ADDRESS,
   TEST_556_TOKEN_ADDRESS,
   TOKEN_ADDRESSES,
-  UNIVERSAL_ROUTER_ADDRESS,
+  SWAP_ROUTER_02_ADDRESS,
   USDC_ADDRESS,
 };
