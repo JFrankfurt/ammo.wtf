@@ -5,10 +5,12 @@ import { base, sepolia } from "wagmi/chains";
 export const config = getDefaultConfig({
   appName: "ammo.wtf",
   projectId: "90d5103a33c09cd272b535dbfffa8fe2",
-  chains: [base, sepolia],
+  chains: [sepolia, base],
   transports: {
-    [base.id]: http(),
+    // @ts-ignore
     [sepolia.id]: http(),
+    // @ts-ignore
+    [base.id]: http(),
   },
   ssr: true,
 });

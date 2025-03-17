@@ -37,7 +37,7 @@ export function useUniswapV4Price(
   tokenDecimals: number = 18
 ): TokenPriceResult {
   const chainId = useChainId();
-
+  console.log("jf chainId", chainId);
   // Create Token instances
   const tokenUSDC = useMemo(() => {
     return new Token(

@@ -272,16 +272,16 @@ export const TokenBalanceSummary = ({
                     <Image
                       src={token.icon}
                       alt={token.symbol}
-                      className="w-8 h-8 md:w-10 md:h-10"
+                      className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0"
                       width={40}
                       height={40}
                     />
                   ) : (
-                    <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs md:text-sm">
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs md:text-sm flex-shrink-0">
                       {token.symbol.slice(0, 2)}
                     </div>
                   )}
-                  <span className="font-medium text-gray-800 group-hover:text-blue-700 transition-colors">
+                  <span className="font-medium text-gray-800 group-hover:text-blue-700 transition-colors flex-grow">
                     {token.name}
                   </span>
                 </div>
