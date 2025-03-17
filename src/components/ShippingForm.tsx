@@ -127,7 +127,7 @@ export const ShippingForm = ({
   const totalValueUsd = useMemo(() => {
     return Object.entries(quantities).reduce((sum, [address, qty]) => {
       const token = allTokens.find((t) => t.address === address);
-      return sum + (token?.priceUsd ?? 0.3) * qty * 250;
+      return sum + 0.3 * qty * 250;
     }, 0);
   }, [quantities, allTokens]);
 

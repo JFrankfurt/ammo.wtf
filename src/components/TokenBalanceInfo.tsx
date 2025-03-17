@@ -5,18 +5,17 @@ import { useState } from "react";
 import { useReadContract } from "wagmi";
 import { default as erc20Abi } from "../abi/ammoTokenERC20";
 import { UniswapSwap } from "./PurchaseAmmoDialog";
-
-export interface Token {
-  address: `0x${string}`;
-  symbol: string;
-  priceUsd: number;
-}
+import type { Address } from "viem";
 
 export const TokenBalanceInfo = ({
   address,
   symbol,
   accountAddress,
-}: Token & { accountAddress: `0x${string}` }) => {
+}: {
+  address: Address;
+  symbol: string;
+  accountAddress: `0x${string}`;
+}) => {
   const { data: balance } = useReadContract({
     address,
     abi: erc20Abi,

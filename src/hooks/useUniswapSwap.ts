@@ -234,7 +234,7 @@ export function useUniswapSwap(chainId: number) {
 
   const checkAndApproveToken = useCallback(
     async (tokenAddress: string, amount: string): Promise<boolean> => {
-      if (!address || !walletClient) return false;
+      if (!address || !walletClient || !publicClient) return false;
 
       try {
         // Check current allowance

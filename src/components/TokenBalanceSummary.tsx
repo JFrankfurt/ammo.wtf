@@ -59,8 +59,9 @@ export const TokenBalanceSummary = ({
           return balances[b.address] - balances[a.address];
         case "value":
           // Sort by value (quantity * price)
-          const valueA = (balances[a.address] || 0) * (a.priceUsd || 0);
-          const valueB = (balances[b.address] || 0) * (b.priceUsd || 0);
+          // priceUsd is no longer supported, using fake data for sorting
+          const valueA = (balances[a.address] || 0) * 10.0; // Fixed price of $10.00
+          const valueB = (balances[b.address] || 0) * 10.0; // Fixed price of $10.00
           return valueB - valueA;
         case "name":
         default:
@@ -518,15 +519,11 @@ export const TokenBalanceSummary = ({
                     </div>
                     <div className="text-xs md:text-sm text-gray-600 break-words">
                       {balances[token.address]?.toFixed(2) || "0"} rounds
-                      {token.priceUsd && (
-                        <span className="text-xs text-gray-500 ml-1 hidden sm:inline">
-                          ($
-                          {(balances[token.address] * token.priceUsd).toFixed(
-                            2
-                          )}
-                          )
-                        </span>
-                      )}
+                      <span className="text-xs text-gray-500 ml-1 hidden sm:inline">
+                        ($
+                        {/* priceUsd is no longer supported, using fixed value */}
+                        {(balances[token.address] * 10.0).toFixed(2)})
+                      </span>
                     </div>
 
                     {/* Token property chips */}

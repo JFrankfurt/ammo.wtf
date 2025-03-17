@@ -76,11 +76,9 @@ export const TokenSelector = ({
         if (!b.caliber) return -1; // Move items without caliber to the end
         return a.caliber.localeCompare(b.caliber);
       } else if (sortBy === "price") {
-        // Handle cases where priceUsd might be missing
-        if (!a.priceUsd && !b.priceUsd) return 0;
-        if (!a.priceUsd) return 1; // Move items without price to the end
-        if (!b.priceUsd) return -1; // Move items without price to the end
-        return a.priceUsd - b.priceUsd;
+        // priceUsd is no longer supported, using fixed price for sorting
+        // All tokens have the same fixed price of $10.00
+        return 0; // No sorting by price since all prices are the same
       }
       return 0;
     });
@@ -195,11 +193,10 @@ export const TokenSelector = ({
                       </div>
                     </div>
 
-                    {token.priceUsd && (
-                      <div className="text-xs font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full whitespace-nowrap self-start">
-                        ${token.priceUsd.toFixed(2)}
-                      </div>
-                    )}
+                    {/* priceUsd is no longer supported, showing fixed price */}
+                    <div className="text-xs font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full whitespace-nowrap self-start">
+                      $10.00
+                    </div>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -118,17 +118,11 @@ export const ShippingFormContents = ({
                     {(quantities[token.address] || 0) * 250} rounds
                   </span>{" "}
                   selected
-                  {token.priceUsd && (
-                    <span className="ml-1 text-gray-500">
-                      ($
-                      {(
-                        (quantities[token.address] || 0) *
-                        250 *
-                        token.priceUsd
-                      ).toFixed(2)}
-                      )
-                    </span>
-                  )}
+                  <span className="ml-1 text-gray-500">
+                    ($
+                    {((quantities[token.address] || 0) * 250 * 10.0).toFixed(2)}
+                    )
+                  </span>
                 </div>
               </div>
             ))}

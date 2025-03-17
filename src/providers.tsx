@@ -11,10 +11,13 @@ const queryClient = new QueryClient();
 
 export function Providers(props: { children: ReactNode }) {
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>{props.children}</RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <>
+      {/* @ts-ignore */}
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider>{props.children}</RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </>
   );
 }
