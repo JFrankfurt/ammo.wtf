@@ -1,6 +1,6 @@
 import React from "react";
 
-type ChipType = "category" | "caliber" | "weight" | "manufacturer";
+type ChipType = "category" | "caliber" | "weight" | "manufacturer" | "symbol";
 
 interface TokenPropertyChipProps {
   type: ChipType;
@@ -39,6 +39,9 @@ export const TokenPropertyChip: React.FC<TokenPropertyChipProps> = ({
       break;
     case "manufacturer":
       typeClasses = "bg-green-50 text-green-700";
+      break;
+    case "symbol":
+      typeClasses = "bg-purple-50 text-purple-700";
       break;
     default:
       typeClasses = "bg-gray-100 text-gray-600";
