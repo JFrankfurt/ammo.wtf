@@ -19,7 +19,7 @@ const FEE_TIERS = {
 export interface TokenPriceResult {
   isLoading: boolean;
   error: Error | null;
-  data: any[] | null;
+  data: any[] | undefined;
 }
 
 const EMPTY_HOOK = "0x0000000000000000000000000000000000000000";
@@ -36,7 +36,6 @@ export function useUniswapV4Slot0(
   tokenDecimals: number = 18
 ): TokenPriceResult {
   const chainId = useChainId();
-  console.log("jf chainId", chainId);
   // Create Token instances
   const tokenUSDC = useMemo(() => {
     return new Token(
@@ -73,7 +72,6 @@ export function useUniswapV4Slot0(
     tickSpacing,
     EMPTY_HOOK
   ) as `0x${string}`;
-  console.log("jf poolId", poolId);
 
   // @ts-expect-error chainId is not typed
   const stateViewAddress = CHAIN_TO_ADDRESSES_MAP[chainId]

@@ -2,7 +2,6 @@ import { Decimal } from "decimal.js";
 
 const Q192 = BigInt(2) ** BigInt(192);
 
-
 export function sqrtPriceX96ToTokenPrices(
   sqrtPriceX96: bigint,
   token0Decimals: number,
@@ -21,7 +20,6 @@ export function sqrtPriceX96ToTokenPrices(
   return [price0, price1];
 }
 
-// Helper functions
 function exponentToBigDecimal(decimals: number): Decimal {
   return new Decimal(10).pow(decimals);
 }
