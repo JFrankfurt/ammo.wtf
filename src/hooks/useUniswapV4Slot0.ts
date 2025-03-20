@@ -2,7 +2,6 @@ import { CHAIN_TO_ADDRESSES_MAP, Token } from "@uniswap/sdk-core";
 import { Pool } from "@uniswap/v4-sdk";
 import { useMemo } from "react";
 import { getAddress } from "viem";
-import { base } from "viem/chains";
 import { useChainId, useReadContract } from "wagmi";
 import UNISWAP_V4_STATE_VIEW_ABI from "../abi/uniswapV4StateView";
 import { USDC_ADDRESS } from "../addresses";
@@ -20,7 +19,7 @@ const FEE_TIERS = {
 export interface TokenPriceResult {
   isLoading: boolean;
   error: Error | null;
-  data: any;
+  data: any[] | null;
 }
 
 const EMPTY_HOOK = "0x0000000000000000000000000000000000000000";
@@ -32,7 +31,7 @@ const EMPTY_HOOK = "0x0000000000000000000000000000000000000000";
  * @param tokenDecimals The number of decimals for the token (defaults to 18)
  * @returns TokenPriceResult with price information and status
  */
-export function useUniswapV4Price(
+export function useUniswapV4Slot0(
   tokenAddress: string,
   tokenDecimals: number = 18
 ): TokenPriceResult {

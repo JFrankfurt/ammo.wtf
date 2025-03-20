@@ -1,8 +1,9 @@
 import { CHAIN_TO_ADDRESSES_MAP } from "@uniswap/sdk-core";
 import { base, sepolia } from "viem/chains";
 
+export const ADDRESS_ZERO = '0x0000000000000000000000000000000000000000' as `0x${string}`
 interface TokenInfo {
-  address: string;
+  address: `0x${string}`;
   name: string;
   symbol: string;
   category?: string;

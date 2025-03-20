@@ -1,3 +1,5 @@
 export { useUniswap } from "./useUniswap";
 export { useUniswapSwap } from "./useUniswapSwap";
-export { useUniswapV4Price } from "./useUniswapV4Price";
+export { useUniswapV4Slot0 } from "./useUniswapV4Slot0";
+
+

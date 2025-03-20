@@ -3,13 +3,20 @@ import { useReadContracts } from "wagmi";
 import { default as erc20Abi } from "../abi/ammoTokenERC20";
 import type { TokenInfo } from "../addresses";
 
+
+interface TokensBalances {
+  balances: Record<`0x${string}`, number>;
+  isLoading: boolean;
+  isError: boolean;
+};
+
 /**
  * Custom hook to fetch balances for multiple tokens
  * @param tokens Array of token info objects
  * @param address User address to check balances for
  * @returns Object containing balances and loading state
  */
-export function useTokenBalances(tokens: TokenInfo[], address?: `0x${string}`) {
+export function useTokenBalances(tokens: TokenInfo[], address?: `0x${string}`): TokensBalances {
   const [balances, setBalances] = useState<Record<string, number>>({});
 
   // Prepare contracts config for batch reading
@@ -20,7 +27,6 @@ export function useTokenBalances(tokens: TokenInfo[], address?: `0x${string}`) {
     args: [address as `0x${string}`],
   }));
 
-  // Use wagmi's useReadContracts to batch read all token balances
   const { data, isLoading, isError } = useReadContracts({
     contracts: contractsConfig,
     query: {

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { useAccount } from "wagmi";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { getTokensForChain, type TokenInfo } from "../addresses";
 import { useTokenBalances } from "../hooks/useTokenBalances";
 import { TokenPriceDisplay } from "./TokenPriceDisplay";
@@ -9,10 +9,8 @@ import { fallbackChainId } from "../utils/chains";
 import { useDebounceValue } from "usehooks-ts";
 
 interface TokenBalanceSummaryProps {
-  onTokenAction: (token: TokenInfo, action: "ship" | "purchase") => void;
+  onTokenAction: (token: TokenInfo, action: "purchase" | "ship") => void;
 }
-
-type SortOption = "name" | "quantity" | "value";
 
 export const TokenBalanceSummary = ({
   onTokenAction,
@@ -20,7 +18,7 @@ export const TokenBalanceSummary = ({
   const { chainId, address } = useAccount();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounceValue(searchTerm, 500);
-  const [sortBy, setSortBy] = useState<SortOption>("name");
+  const [sortBy, setSortBy] = useState<"name" | "price" | "value">("name");
 
   // Get all tokens for the current chain
   const tokens = useMemo(
@@ -45,22 +43,48 @@ export const TokenBalanceSummary = ({
     );
   }, [tokens, debouncedSearchTerm]);
 
+  // Sort tokens based on selected sort option
+  const sortedTokens = useMemo(() => {
+    return [...filteredTokens].sort((a, b) => {
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "price") {
+        // Placeholder for price sorting - would need actual price data
+        return a.symbol.localeCompare(b.symbol);
+      } else {
+        // Sort by category
+        const catA = a.category || "";
+        const catB = b.category || "";
+        return catA.localeCompare(catB);
+      }
+    });
+  }, [filteredTokens, sortBy]);
+
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
 
   // Handle sort change
-  const handleSortChange = (option: SortOption) => {
-    setSortBy(option);
-  };
+  const handleSortChange = useCallback((sort: "name" | "price" | "value") => {
+    setSortBy(sort);
+  }, []);
+
+  // Check if user has a balance of a specific token
+  const hasBalance = useCallback(
+    (tokenAddress: string) => {
+      const address = tokenAddress as `0x${string}`;
+      return (balances[address] || 0) > 0;
+    },
+    [balances]
+  );
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-4 md:py-6">
-        <div className="flex flex-col items-center gap-2">
-          <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-blue-600"></div>
-          <p className="text-xs md:text-sm text-gray-500">
+      <div className="flex items-center justify-center py-8">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <p className="text-sm text-gray-600 font-medium">
             Loading your ammunition...
           </p>
         </div>
@@ -69,12 +93,13 @@ export const TokenBalanceSummary = ({
   }
 
   return (
-    <div className="space-y-2 md:space-y-3">
-      <div className="bg-gray-50 rounded-lg p-3 md:p-4 border border-gray-100">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="w-8 h-8 md:w-10 md:h-10 bg-gray-100 rounded-full flex items-center justify-center">
+    <div className="space-y-4">
+      {/* Info Banner */}
+      <div className="bg-blue-50 rounded-lg p-4 border border-blue-100 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
             <svg
-              className="w-4 h-4 md:w-5 md:h-5 text-gray-500"
+              className="w-5 h-5 text-blue-600"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -87,29 +112,20 @@ export const TokenBalanceSummary = ({
               />
             </svg>
           </div>
-          <p className="text-xs md:text-sm text-gray-600 max-w-md">
+          <p className="text-sm text-blue-800">
             Browse available ammunition below and click &quot;Purchase&quot; to
             buy on Uniswap.
           </p>
         </div>
       </div>
 
-      {/* Search Input for Available Ammunition */}
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Search ammunition..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        {searchTerm && (
-          <button
-            onClick={() => setSearchTerm("")}
-            className="absolute right-2 md:right-3 top-1.5 md:top-2.5 text-gray-400 hover:text-gray-600"
-          >
+      {/* Search and Filter Controls */}
+      <div className="bg-white rounded-lg space-y-3">
+        {/* Search Input */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg
-              className="w-3 h-3 md:w-4 md:h-4"
+              className="h-4 w-4 text-gray-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -118,60 +134,88 @@ export const TokenBalanceSummary = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-          </button>
-        )}
-      </div>
-
-      {/* Sort Options */}
-      <div className="flex justify-between items-center">
-        <div className="flex space-x-1 text-xs">
-          <button
-            onClick={() => handleSortChange("name")}
-            className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
-              sortBy === "name"
-                ? "bg-blue-100 text-blue-700 font-medium"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            Name
-          </button>
-          <button
-            onClick={() => handleSortChange("quantity")}
-            className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
-              sortBy === "quantity"
-                ? "bg-blue-100 text-blue-700 font-medium"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            Price
-          </button>
-          <button
-            onClick={() => handleSortChange("value")}
-            className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
-              sortBy === "value"
-                ? "bg-blue-100 text-blue-700 font-medium"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            Category
-          </button>
+          </div>
+          <input
+            type="text"
+            placeholder="Search ammunition..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
         </div>
-        <span className="text-xs text-gray-500">
-          {filteredTokens.length}{" "}
-          {filteredTokens.length === 1 ? "type" : "types"}
-        </span>
+
+        {/* Sort Options */}
+        <div className="flex justify-start items-center gap-2">
+          <div className="flex">
+            <span className="text-xs text-gray-500 mr-2 self-center">
+              Sort by:
+            </span>
+            <div className="flex space-x-1 text-xs bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => handleSortChange("name")}
+                className={`px-3 py-1.5 rounded-md transition-colors ${
+                  sortBy === "name"
+                    ? "bg-white text-blue-700 font-medium shadow-sm"
+                    : "text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                Name
+              </button>
+              <button
+                onClick={() => handleSortChange("price")}
+                className={`px-3 py-1.5 rounded-md transition-colors ${
+                  sortBy === "price"
+                    ? "bg-white text-blue-700 font-medium shadow-sm"
+                    : "text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                Price
+              </button>
+              <button
+                onClick={() => handleSortChange("value")}
+                className={`px-3 py-1.5 rounded-md transition-colors ${
+                  sortBy === "value"
+                    ? "bg-white text-blue-700 font-medium shadow-sm"
+                    : "text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                Category
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* No Results Message */}
       {filteredTokens.length === 0 && searchTerm && (
-        <div className="bg-gray-50 rounded-lg p-3 md:p-4 text-center">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-gray-100 rounded-full flex items-center justify-center">
+        <div className="bg-gray-50 rounded-lg p-6 text-center border border-gray-200 shadow-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
               <svg
-                className="w-4 h-4 md:w-5 md:h-5 text-gray-400"
+                className="w-6 h-6 text-gray-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -184,46 +228,68 @@ export const TokenBalanceSummary = ({
                 />
               </svg>
             </div>
-            <p className="text-xs md:text-sm text-gray-500">
-              No ammunition matching &quot;{searchTerm}&quot;
-            </p>
+            <div>
+              <p className="text-gray-700 font-medium">No results found</p>
+              <p className="text-sm text-gray-500 mt-1">
+                No ammunition matching &quot;{searchTerm}&quot;
+              </p>
+            </div>
+            <button
+              onClick={() => setSearchTerm("")}
+              className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Clear search
+            </button>
           </div>
         </div>
       )}
 
-      {/* Available Ammunition Grid */}
-      <div className="grid grid-cols-1 space-y-2">
-        {filteredTokens.map((token) => (
-          <button
+      {/* Available Ammunition */}
+      <div className="space-y-3">
+        {sortedTokens.map((token) => (
+          <div
             key={token.address}
-            className="flex flex-col bg-gray-50 rounded-lg p-2 border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all cursor-pointer group"
-            onClick={() => onTokenAction(token, "purchase")}
+            className="bg-white rounded-lg border border-transparent transition-all p-2 relative group"
           >
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-row gap-1 md:gap-2 items-center justify-start">
+            <div className="flex flex-col gap-3">
+              {/* Token Header */}
+              <div className="flex items-center gap-3">
                 {token.icon ? (
                   <Image
                     src={token.icon}
                     alt={token.symbol}
-                    className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0"
+                    className="w-10 h-10 rounded-full flex-shrink-0"
                     width={40}
                     height={40}
                   />
                 ) : (
-                  <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs md:text-sm flex-shrink-0">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
                     {token.symbol.slice(0, 2)}
                   </div>
                 )}
-                <span className="font-medium text-gray-800 group-hover:text-blue-700 transition-colors flex-grow">
-                  {token.name}
-                </span>
-              </div>
-              <TokenPriceDisplay token={token} />
-            </div>
+                <div className="flex-grow">
+                  <h3 className="font-medium text-gray-900">{token.name}</h3>
+                  <TokenPriceDisplay token={token} />
+                </div>
 
-            <div className="flex flex-row justify-between items-end gap-1.5">
-              {/* Token property chips */}
-              <div className="flex flex-wrap gap-1.5 my-1.5">
+                {/* Balance Badge */}
+                <div className="text-xs">
+                  {hasBalance(token.address) ? (
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                      {(
+                        balances[token.address as `0x${string}`] || 0
+                      ).toLocaleString()}
+                    </span>
+                  ) : (
+                    <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
+                      No balance
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Token Properties */}
+              <div className="flex flex-wrap gap-2">
                 {token.category && (
                   <TokenPropertyChip type="category" value={token.category} />
                 )}
@@ -244,11 +310,38 @@ export const TokenBalanceSummary = ({
                 )}
               </div>
 
-              <div className="text-blue-600 text-xs md:text-sm opacity-80 group-hover:opacity-100 transition-opacity self-end w-[35%] text-right">
-                Purchase →
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3">
+                <button
+                  disabled={!hasBalance(token.address)}
+                  onClick={() => onTokenAction(token, "ship")}
+                  className={`px-4 py-1 text-sm rounded-md font-medium transition-colors ${
+                    hasBalance(token.address)
+                      ? "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  Ship
+                </button>
+                <button
+                  onClick={() => onTokenAction(token, "purchase")}
+                  onMouseEnter={(e) =>
+                    e.currentTarget
+                      .closest(".group")
+                      ?.classList.add("border-blue-300", "bg-blue-50")
+                  }
+                  onMouseLeave={(e) =>
+                    e.currentTarget
+                      .closest(".group")
+                      ?.classList.remove("border-blue-300", "bg-blue-50")
+                  }
+                  className="px-4 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Purchase
+                </button>
               </div>
             </div>
-          </button>
+          </div>
         ))}
       </div>
     </div>
