@@ -4,7 +4,7 @@ import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { useState } from "react";
 import { useReadContract } from "wagmi";
 import { default as erc20Abi } from "../abi/ammoTokenERC20";
-import { UniswapSwap } from "./PurchaseAmmoDialog";
+import { PurchaseAmmoDialog } from "./PurchaseAmmoDialog";
 import type { Address } from "viem";
 
 export const TokenBalanceInfo = ({
@@ -116,7 +116,7 @@ export const TokenBalanceInfo = ({
                 </svg>
               </button>
             </div>
-            <UniswapSwap
+            <PurchaseAmmoDialog
               onSuccess={(hash) => {
                 setIsSwapOpen(false);
               }}

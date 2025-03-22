@@ -6,6 +6,7 @@ import {
   DialogTitle,
   Transition,
   TransitionChild,
+  CloseButton,
 } from "@headlessui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Fragment, useMemo, useState } from "react";
@@ -265,10 +266,9 @@ export const ShippingForm = ({
                 </DialogTitle>
 
                 {/* Close button */}
-                {!isSubmitting && !isConfirming && (
-                  <button
+                {Boolean(!isSubmitting && !isConfirming) && (
+                  <CloseButton
                     type="button"
-                    onClick={onClose}
                     className="text-gray-400 hover:text-gray-500 focus:outline-none"
                     aria-label="Close"
                   >
@@ -285,7 +285,7 @@ export const ShippingForm = ({
                         d="M6 18L18 6M6 6l12 12"
                       />
                     </svg>
-                  </button>
+                  </CloseButton>
                 )}
               </div>
 

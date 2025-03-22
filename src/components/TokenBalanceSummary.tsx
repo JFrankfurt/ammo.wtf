@@ -303,6 +303,7 @@ export const TokenBalanceSummary = ({
                 <div className="text-xs">
                   {hasBalance(token.address) ? (
                     <span className="text-green-800">
+                      Balance:{" "}
                       {(
                         balances[token.address as `0x${string}`] || 0
                       ).toLocaleString()}
