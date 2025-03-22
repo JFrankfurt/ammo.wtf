@@ -254,7 +254,7 @@ export const TokenBalanceSummary = ({
             >
               <div className="flex flex-col gap-1">
                 {/* Token Header */}
-                <div className="flex items-center">
+                <div className="flex items-center gap-2">
                   {token.icon ? (
                     <Image
                       src={token.icon}
