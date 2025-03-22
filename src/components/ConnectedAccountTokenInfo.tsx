@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAccount, useBalance } from "wagmi";
 import { getTokensForChain, type TokenInfo, USDC_ADDRESS } from "../addresses";
 import { Button } from "./Button";
@@ -8,6 +8,7 @@ import { ShippingForm } from "./ShippingForm";
 import { TokenBalanceSummary } from "./TokenBalanceSummary";
 import { TokenSelectorDialog } from "./TokenSelectorDialog";
 import { PurchaseDialog } from "./PurchaseDialog";
+import { Transition } from "@headlessui/react";
 
 /**
  * ConnectedAccountTokenInfo displays token balances and provides interfaces
@@ -19,7 +20,24 @@ const ConnectedAccountTokenInfo = () => {
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
   const [selectorMode, setSelectorMode] = useState<"ship" | "purchase">("ship");
+  const [isExpanded, setIsExpanded] = useState(false);
   const { status, address, chainId } = useAccount();
+
+  // Initialize expanded state based on screen size
+  useEffect(() => {
+    const handleResize = () => {
+      setIsExpanded(window.innerWidth >= 768); // 768px is our md breakpoint
+    };
+
+    // Set initial state
+    handleResize();
+
+    // Add resize listener
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Get USDC balance
   const { data: usdcBalance, isLoading: isLoadingUsdcBalance } = useBalance({
@@ -101,8 +119,12 @@ const ConnectedAccountTokenInfo = () => {
 
         {/* Token Balance Summary Card */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="p-3 md:p-4">
-            <div className="flex justify-between items-center mb-3 md:mb-4">
+          {/* Header with expand/collapse button */}
+          <div
+            className="p-3 md:p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            <div className="flex items-center justify-between w-full gap-2">
               <h2 className="text-base md:text-lg font-bold text-gray-800">
                 Your Ammunition
               </h2>
@@ -113,34 +135,74 @@ const ConnectedAccountTokenInfo = () => {
                 USDC
               </div>
             </div>
-
-            <TokenBalanceSummary onTokenAction={handleSelectToken} />
-
-            <div className="flex flex-row justify-between mt-2 pt-2 gap-2 sm:gap-4">
-              <Button
-                onClick={() => {
-                  setSelectorMode("purchase");
-                  setIsSelectorOpen(true);
-                }}
-                variant="secondary"
-                className="w-full sm:flex-1"
+            <button
+              className="ml-1 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+              aria-label={isExpanded ? "Collapse panel" : "Expand panel"}
+            >
+              <svg
+                className={`w-5 h-5 transform transition-transform duration-200 ${
+                  isExpanded ? "rotate-180" : ""
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <div className="flex items-center justify-center">
-                  <span className="text-sm md:text-base">Buy Ammunition</span>
-                </div>
-              </Button>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+          </div>
 
-              <Button
-                onClick={() => {
-                  setSelectorMode("ship");
-                  setIsSelectorOpen(true);
-                }}
-                className="w-full sm:flex-1"
-              >
-                <div className="flex items-center justify-center">
-                  <span className="text-sm md:text-base">Ship Ammunition</span>
-                </div>
-              </Button>
+          {/* Collapsible content */}
+          <div
+            className={`
+              transition-[max-height,opacity,transform] duration-300 ease-out overflow-hidden
+              ${isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"}
+            `}
+          >
+            <div
+              className={`
+              p-3 md:p-4 pt-0 border-t border-gray-100
+              transition-transform duration-300
+              ${isExpanded ? "translate-y-0" : "-translate-y-4"}
+            `}
+            >
+              <TokenBalanceSummary onTokenAction={handleSelectToken} />
+
+              <div className="flex flex-row justify-between mt-2 pt-2 gap-2 sm:gap-4">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectorMode("purchase");
+                    setIsSelectorOpen(true);
+                  }}
+                  variant="secondary"
+                  className="w-full sm:flex-1"
+                >
+                  <div className="flex items-center justify-center">
+                    <span className="text-sm md:text-base">Buy Ammunition</span>
+                  </div>
+                </Button>
+
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectorMode("ship");
+                    setIsSelectorOpen(true);
+                  }}
+                  className="w-full sm:flex-1"
+                >
+                  <div className="flex items-center justify-center">
+                    <span className="text-sm md:text-base">
+                      Ship Ammunition
+                    </span>
+                  </div>
+                </Button>
+              </div>
             </div>
           </div>
         </div>

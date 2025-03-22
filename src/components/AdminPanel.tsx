@@ -100,7 +100,7 @@ export default function AdminPanel() {
       ) && (
         <Button
           variant="primary"
-          className="py-1 px-2 sm:py-2 sm:px-4 fixed top-4 left-4 sm:bottom-4 sm:right-4 shadow-lg rounded-full"
+          className="fixed bottom-4 right-4 shadow-lg"
           onClick={() => setIsOpen(!isOpen)}
         >
           Admin Panel
