@@ -121,7 +121,7 @@ const ConnectedAccountTokenInfo = () => {
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
           {/* Header with expand/collapse button */}
           <div
-            className="p-3 md:p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors"
+            className="p-2 md:p-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors"
             onClick={() => setIsExpanded(!isExpanded)}
           >
             <div className="flex items-center justify-between w-full gap-2">
@@ -166,7 +166,7 @@ const ConnectedAccountTokenInfo = () => {
           >
             <div
               className={`
-              p-3 md:p-4 pt-0 border-t border-gray-100
+              p-2 md:p-3 pt-0 border-t border-gray-100
               transition-transform duration-300
               ${isExpanded ? "translate-y-0" : "-translate-y-4"}
             `}
