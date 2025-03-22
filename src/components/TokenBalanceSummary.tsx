@@ -94,8 +94,8 @@ export const TokenBalanceSummary = ({
 
   return (
     <div className="space-y-2 sm:space-y-4">
-      {/* Info Banner */}
-      <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-100 shadow-sm">
+      {/* Info Banner - Only shown on taller screens */}
+      <div className="hidden min-h-[600px]:block bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-100 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
             <svg
@@ -251,9 +251,9 @@ export const TokenBalanceSummary = ({
             key={token.address}
             className="bg-white rounded-lg border border-transparent transition-all px-2 py-1 relative group"
           >
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
               {/* Token Header */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center">
                 {token.icon ? (
                   <Image
                     src={token.icon}

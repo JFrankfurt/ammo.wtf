@@ -2,7 +2,6 @@
 export { default as ConnectedAccountTokenInfo } from "./ConnectedAccountTokenInfo";
 export { TokenBalanceInfo } from "./TokenBalanceInfo";
 export { ShippingForm } from "./ShippingForm";
-export { PurchaseAmmoDialog } from "./PurchaseAmmoDialog";
 export { Button } from "./Button";
 export { TransactionStates } from "./TransactionStates";
 export { TokenSelector } from "./TokenSelector";
