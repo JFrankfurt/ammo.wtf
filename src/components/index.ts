@@ -1,6 +1,5 @@
 // Main components
 export { default as ConnectedAccountTokenInfo } from "./ConnectedAccountTokenInfo";
-export { TokenBalanceInfo } from "./TokenBalanceInfo";
 export { ShippingForm } from "./ShippingForm";
 export { Button } from "./Button";
 export { TransactionStates } from "./TransactionStates";

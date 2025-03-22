@@ -8,10 +8,10 @@ import {
 } from "@headlessui/react";
 import { Fragment, useEffect, useState, useMemo } from "react";
 import { USDC_ADDRESS } from "../addresses";
-import { useAccount, useBalance } from "wagmi";
+import { useAccount, useBalance, useChainId } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { FormInput } from "./FormInput";
-import { useUniswap } from "../hooks";
+import { useUniswapSwap } from "../hooks";
 
 interface PurchaseDialogProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ export const PurchaseDialog = ({
   }, [usdcBalance]);
 
   // Use our consolidated Uniswap hook
-  const { state, getQuote, swap } = useUniswap(chainId);
+  const { state, getQuote, swap } = useUniswapSwap(chainId ?? 1);
 
   // Form state - only need USDC amount
   const [amount, setAmount] = useState("");

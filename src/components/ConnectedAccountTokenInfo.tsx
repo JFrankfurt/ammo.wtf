@@ -181,11 +181,9 @@ const ConnectedAccountTokenInfo = () => {
                     setIsSelectorOpen(true);
                   }}
                   variant="secondary"
-                  className="w-full sm:flex-1"
+                  className="w-full sm:flex-1 flex items-center justify-center text-sm md:text-base"
                 >
-                  <div className="flex items-center justify-center">
-                    <span className="text-sm md:text-base">Buy Ammunition</span>
-                  </div>
+                  Buy Ammo
                 </Button>
 
                 <Button
@@ -194,13 +192,9 @@ const ConnectedAccountTokenInfo = () => {
                     setSelectorMode("ship");
                     setIsSelectorOpen(true);
                   }}
-                  className="w-full sm:flex-1"
+                  className="w-full sm:flex-1 flex items-center justify-center text-sm md:text-base"
                 >
-                  <div className="flex items-center justify-center">
-                    <span className="text-sm md:text-base">
-                      Ship Ammunition
-                    </span>
-                  </div>
+                  Ship Ammo
                 </Button>
               </div>
             </div>
