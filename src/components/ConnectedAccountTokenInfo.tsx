@@ -118,7 +118,7 @@ const ConnectedAccountTokenInfo = () => {
         )}
 
         {/* Token Balance Summary Card */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-t-lg sm:rounded-b-lg shadow-lg border border-gray-100 overflow-hidden">
           {/* Header with expand/collapse button */}
           <div
             className="p-2 md:p-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors"
