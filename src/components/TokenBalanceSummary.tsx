@@ -93,9 +93,9 @@ export const TokenBalanceSummary = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       {/* Info Banner */}
-      <div className="bg-blue-50 rounded-lg p-4 border border-blue-100 shadow-sm">
+      <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-100 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
             <svg
@@ -120,7 +120,7 @@ export const TokenBalanceSummary = ({
       </div>
 
       {/* Search and Filter Controls */}
-      <div className="bg-white rounded-lg space-y-3">
+      <div className="bg-white rounded-lg space-y-1 sm:space-y-3">
         {/* Search Input */}
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -245,11 +245,11 @@ export const TokenBalanceSummary = ({
       )}
 
       {/* Available Ammunition */}
-      <div className="space-y-3">
+      <div>
         {sortedTokens.map((token) => (
           <div
             key={token.address}
-            className="bg-white rounded-lg border border-transparent transition-all p-2 relative group"
+            className="bg-white rounded-lg border border-transparent transition-all px-2 py-1 relative group"
           >
             <div className="flex flex-col gap-3">
               {/* Token Header */}
@@ -258,33 +258,20 @@ export const TokenBalanceSummary = ({
                   <Image
                     src={token.icon}
                     alt={token.symbol}
-                    className="w-10 h-10 rounded-full flex-shrink-0"
+                    className="hidden sm:block w-10 h-10 rounded-full flex-shrink-0"
                     width={40}
                     height={40}
                   />
                 ) : (
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
+                  <div className="hidden sm:flex w-10 h-10 bg-blue-100 rounded-full  items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
                     {token.symbol.slice(0, 2)}
                   </div>
                 )}
                 <div className="flex-grow">
-                  <h3 className="font-medium text-gray-900">{token.name}</h3>
+                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">
+                    {token.name}
+                  </h3>
                   <TokenPriceDisplay token={token} />
-                </div>
-
-                {/* Balance Badge */}
-                <div className="text-xs">
-                  {hasBalance(token.address) ? (
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-                      {(
-                        balances[token.address as `0x${string}`] || 0
-                      ).toLocaleString()}
-                    </span>
-                  ) : (
-                    <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
-                      No balance
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -311,34 +298,50 @@ export const TokenBalanceSummary = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3">
-                <button
-                  disabled={!hasBalance(token.address)}
-                  onClick={() => onTokenAction(token, "ship")}
-                  className={`px-4 py-1 text-sm rounded-md font-medium transition-colors ${
-                    hasBalance(token.address)
-                      ? "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  Ship
-                </button>
-                <button
-                  onClick={() => onTokenAction(token, "purchase")}
-                  onMouseEnter={(e) =>
-                    e.currentTarget
-                      .closest(".group")
-                      ?.classList.add("border-blue-300", "bg-blue-50")
-                  }
-                  onMouseLeave={(e) =>
-                    e.currentTarget
-                      .closest(".group")
-                      ?.classList.remove("border-blue-300", "bg-blue-50")
-                  }
-                  className="px-4 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Purchase
-                </button>
+              <div className="flex justify-between gap-2 items-center">
+                {/* Balance Badge */}
+                <div className="text-xs">
+                  {hasBalance(token.address) ? (
+                    <span className="text-green-800">
+                      {(
+                        balances[token.address as `0x${string}`] || 0
+                      ).toLocaleString()}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 whitespace-nowrap">
+                      No balance
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    disabled={!hasBalance(token.address)}
+                    onClick={() => onTokenAction(token, "ship")}
+                    className={`px-4 py-1 text-sm rounded-md font-medium transition-colors ${
+                      hasBalance(token.address)
+                        ? "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    Ship
+                  </button>
+                  <button
+                    onClick={() => onTokenAction(token, "purchase")}
+                    onMouseEnter={(e) =>
+                      e.currentTarget
+                        .closest(".group")
+                        ?.classList.add("border-blue-300", "bg-blue-50")
+                    }
+                    onMouseLeave={(e) =>
+                      e.currentTarget
+                        .closest(".group")
+                        ?.classList.remove("border-blue-300", "bg-blue-50")
+                    }
+                    className="px-4 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Purchase
+                  </button>
+                </div>
               </div>
             </div>
           </div>

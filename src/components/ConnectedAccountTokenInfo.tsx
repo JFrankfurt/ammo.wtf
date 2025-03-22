@@ -66,8 +66,8 @@ const ConnectedAccountTokenInfo = () => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 md:bottom-4 md:left-4 md:right-auto max-w-full w-full md:max-w-sm p-4 md:p-0 bg-gray-50 md:bg-transparent border-t border-gray-200 md:border-0 z-40">
-      <div className="space-y-4">
+    <div className="fixed bottom-0 left-0 right-0 md:bottom-4 md:left-4 md:right-auto max-w-full w-full md:max-w-sm">
+      <div className="space-y-2 sm:space-y-4">
         {/* Token Selector Dialog */}
         <TokenSelectorDialog
           isOpen={isSelectorOpen}
@@ -116,7 +116,7 @@ const ConnectedAccountTokenInfo = () => {
 
             <TokenBalanceSummary onTokenAction={handleSelectToken} />
 
-            <div className="flex flex-col sm:flex-row justify-between mt-2 pt-2 gap-2 sm:gap-4">
+            <div className="flex flex-row justify-between mt-2 pt-2 gap-2 sm:gap-4">
               <Button
                 onClick={() => {
                   setSelectorMode("purchase");

@@ -29,7 +29,7 @@ const TEST_556_TOKEN_ADDRESS: Record<number, TokenInfo> = {
     caliber: "5.56mm",
     description: "Standard NATO rifle ammunition",
     weight: 77,
-    manufacturer: "Bone Frog Ammunition™",
+    manufacturer: "Bone Frog Ammunition",
   },
   [sepolia.id]: {
     address: "0x5ccD30e539F24F34b870b8480d37e31f6D6F3ac7" as `0x${string}`,
@@ -39,7 +39,7 @@ const TEST_556_TOKEN_ADDRESS: Record<number, TokenInfo> = {
     caliber: "5.56mm",
     description: "77GR Barnes Match Burner OTM BT rifle ammunition",
     weight: 77,
-    manufacturer: "Bone Frog Ammunition™",
+    manufacturer: "Bone Frog Ammunition",
   },
 };
 
