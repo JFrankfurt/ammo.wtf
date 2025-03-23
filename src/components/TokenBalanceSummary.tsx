@@ -7,6 +7,8 @@ import { TokenPriceDisplay } from "./TokenPriceDisplay";
 import { TokenPropertyChip } from "./TokenPropertyChip";
 import { fallbackChainId } from "../utils/chains";
 import { useDebounceValue } from "usehooks-ts";
+import { isSupportedNetwork } from "../utils/networks";
+import { Button } from "./Button";
 
 interface TokenBalanceSummaryProps {
   onTokenAction: (token: TokenInfo, action: "purchase" | "ship") => void;
@@ -92,10 +94,18 @@ export const TokenBalanceSummary = ({
     );
   }
 
+  let infoMessageText =
+    'Browse available ammunition below and click "Purchase" to buy on Uniswap.';
+
+  if (!isSupportedNetwork(chainId ?? fallbackChainId)) {
+    infoMessageText =
+      "Please switch to Base or Sepolia to browse available ammunition.";
+  }
+
   return (
     <div className="space-y-2 sm:space-y-4 max-h-[70vh] flex flex-col">
-      {/* Info Banner - Only shown on taller screens */}
-      <div className="hidden min-h-[600px]:block bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-100 shadow-sm flex-shrink-0">
+      {/* Info Banner - Only hidden on shorter screens */}
+      <div className="block max-h-[600px]:hidden bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-100 shadow-sm flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
             <svg
@@ -112,46 +122,18 @@ export const TokenBalanceSummary = ({
               />
             </svg>
           </div>
-          <p className="text-sm text-blue-800">
-            Browse available ammunition below and click &quot;Purchase&quot; to
-            buy on Uniswap.
-          </p>
+          <p className="text-sm text-blue-800">{infoMessageText}</p>
         </div>
       </div>
 
       {/* Search and Filter Controls */}
-      <div className="bg-white rounded-lg space-y-1 sm:space-y-3 flex-shrink-0">
-        {/* Search Input */}
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg
-              className="h-4 w-4 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </div>
-          <input
-            type="text"
-            placeholder="Search ammunition..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
+      {tokens.length > 0 ? (
+        <div className="bg-white rounded-lg space-y-1 sm:space-y-3 flex-shrink-0">
+          {/* Search Input */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg
-                className="w-4 h-4"
+                className="h-4 w-4 text-gray-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -160,54 +142,88 @@ export const TokenBalanceSummary = ({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
               </svg>
-            </button>
-          )}
-        </div>
+            </div>
+            <input
+              type="text"
+              placeholder="Search ammunition..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
 
-        {/* Sort Options */}
-        <div className="flex justify-start items-center gap-2">
-          <div className="flex">
-            <span className="text-xs text-gray-500 mr-2 self-center">
-              Sort by:
-            </span>
-            <div className="flex space-x-1 text-xs bg-gray-100 p-1 rounded-lg">
-              <button
-                onClick={() => handleSortChange("name")}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  sortBy === "name"
-                    ? "bg-white text-blue-700 font-medium shadow-sm"
-                    : "text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                Name
-              </button>
-              <button
-                onClick={() => handleSortChange("price")}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  sortBy === "price"
-                    ? "bg-white text-blue-700 font-medium shadow-sm"
-                    : "text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                Price
-              </button>
-              <button
-                onClick={() => handleSortChange("value")}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  sortBy === "value"
-                    ? "bg-white text-blue-700 font-medium shadow-sm"
-                    : "text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                Category
-              </button>
+          {/* Sort Options */}
+          <div className="flex justify-start items-center gap-2">
+            <div className="flex">
+              <span className="text-xs text-gray-500 mr-2 self-center">
+                Sort by:
+              </span>
+              <div className="flex space-x-1 text-xs bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => handleSortChange("name")}
+                  className={`px-3 py-1.5 rounded-md transition-colors ${
+                    sortBy === "name"
+                      ? "bg-white text-blue-700 font-medium shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  Name
+                </button>
+                <button
+                  onClick={() => handleSortChange("price")}
+                  className={`px-3 py-1.5 rounded-md transition-colors ${
+                    sortBy === "price"
+                      ? "bg-white text-blue-700 font-medium shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  Price
+                </button>
+                <button
+                  onClick={() => handleSortChange("value")}
+                  className={`px-3 py-1.5 rounded-md transition-colors ${
+                    sortBy === "value"
+                      ? "bg-white text-blue-700 font-medium shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  Category
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <Button>
+          <span className="text-sm sm:text-base">
+            Stay tuned for our mainnet launch! Until then, play around on
+            Sepolia instead.
+          </span>
+        </Button>
+      )}
 
       {/* No Results Message */}
       {filteredTokens.length === 0 && searchTerm && (

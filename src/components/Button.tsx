@@ -15,13 +15,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           // Base styles
           "px-4 py-2",
           "font-medium",
-          "transition-form",
-          "duration-form",
+          "transition-all",
+          "duration-200",
+          "rounded-md",
           "disabled:cursor-not-allowed",
           "disabled:bg-ashiStone",
           "disabled:text-shiroWhite",
           "disabled:opacity-50",
           "disabled:border-none",
+          "focus:outline-none",
+          "focus:ring-2",
+          "focus:ring-opacity-50",
 
           // Variant-specific styles
           variant === "primary" && [
@@ -29,7 +33,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             "text-shiroWhite",
             "hover:bg-kuroganeSteel",
             "active:bg-sumiBlack",
-            "shadow-form",
+            "active:transform",
+            "active:scale-[0.98]",
+            "shadow-sm",
+            "hover:shadow-md",
           ],
 
           variant === "secondary" && [
@@ -39,7 +46,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             "border-sumiBlack",
             "hover:bg-washiBeige",
             "active:bg-kumoGray",
-            "shadow-form",
+            "active:transform",
+            "active:scale-[0.98]",
+            "shadow-sm",
+            "hover:shadow-md",
           ],
 
           // Full width option

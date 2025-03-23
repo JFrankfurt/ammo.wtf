@@ -1,7 +1,8 @@
 import { CHAIN_TO_ADDRESSES_MAP } from "@uniswap/sdk-core";
 import { base, sepolia } from "viem/chains";
 
-export const ADDRESS_ZERO = '0x0000000000000000000000000000000000000000' as `0x${string}`
+export const ADDRESS_ZERO =
+  "0x0000000000000000000000000000000000000000" as `0x${string}`;
 interface TokenInfo {
   address: `0x${string}`;
   name: string;
@@ -21,16 +22,6 @@ const FACTORY_ADDRESS: Record<number, `0x${string}`> = {
 };
 
 const TEST_556_TOKEN_ADDRESS: Record<number, TokenInfo> = {
-  [base.id]: {
-    address: "" as `0x${string}`,
-    name: "5.56×45mm NATO",
-    symbol: "5.56",
-    category: "rifle",
-    caliber: "5.56mm",
-    description: "Standard NATO rifle ammunition",
-    weight: 77,
-    manufacturer: "Bone Frog Ammunition",
-  },
   [sepolia.id]: {
     address: "0x5ccD30e539F24F34b870b8480d37e31f6D6F3ac7" as `0x${string}`,
     name: "5.56 77GR Bone Frog Ammunition™ Barnes Match Burner OTM BT",
@@ -44,16 +35,6 @@ const TEST_556_TOKEN_ADDRESS: Record<number, TokenInfo> = {
 };
 
 const HST_9MM_TOKEN_ADDRESS: Record<number, TokenInfo> = {
-  [base.id]: {
-    address: "" as `0x${string}`,
-    name: "9mm Luger",
-    symbol: "9MM",
-    category: "pistol",
-    caliber: "9mm",
-    description: "Standard 9mm Luger pistol ammunition",
-    weight: 147,
-    manufacturer: "Federal",
-  },
   [sepolia.id]: {
     address: "0x8404176e3b00d1f2ccd07e9aad037cd8ca9e0ee7" as `0x${string}`,
     name: "Federal Personal Defense HST 9mm Luger 147 Grain",
@@ -67,15 +48,6 @@ const HST_9MM_TOKEN_ADDRESS: Record<number, TokenInfo> = {
 };
 
 const JELLO_ROUNDS_TOKEN_ADDRESS: Record<number, TokenInfo> = {
-  [base.id]: {
-    address: "" as `0x${string}`,
-    name: "Estevan's Jello Rounds",
-    symbol: "JELLO",
-    category: "pistol",
-    caliber: "9mm",
-    description: "extra tasty",
-    weight: 220,
-  },
   [sepolia.id]: {
     address: "0x0d6cc84a4d6846b0e537d61051e12c7847a633a2" as `0x${string}`,
     name: "Estevan's Jello Rounds",
@@ -96,12 +68,16 @@ const ALL_TOKENS = {
 
 // Helper function to get all tokens for a specific chain
 const getTokensForChain = (chainId: number): TokenInfo[] => {
-  return Object.values(ALL_TOKENS).map((tokenRecord) => tokenRecord[chainId]);
+  const tokensForChain = Object.values(ALL_TOKENS).map(
+    (tokenRecord) => tokenRecord[chainId]
+  );
+  const filteredTokens = tokensForChain.filter((token) => token !== undefined);
+  return filteredTokens.length > 0 ? filteredTokens : [];
 };
 
 // Legacy format for backward compatibility
 const TOKEN_ADDRESSES: Record<number, TokenInfo[]> = {
-  [base.id]: [TEST_556_TOKEN_ADDRESS[base.id]],
+  [base.id]: [],
   [sepolia.id]: [
     TEST_556_TOKEN_ADDRESS[sepolia.id],
     HST_9MM_TOKEN_ADDRESS[sepolia.id],
@@ -129,8 +105,6 @@ const POOL_MANAGER_ADDRESS: Record<number, `0x${string}`> = {
   [sepolia.id]: CHAIN_TO_ADDRESSES_MAP[sepolia.id]
     .v4PoolManagerAddress as `0x${string}`,
 };
-
-
 
 export type { TokenInfo };
 
