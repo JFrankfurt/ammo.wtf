@@ -9,6 +9,7 @@ import { fallbackChainId } from "../utils/chains";
 import { useDebounceValue } from "usehooks-ts";
 import { isSupportedNetwork } from "../utils/networks";
 import { Button } from "./Button";
+import { sepolia } from "viem/chains";
 
 interface TokenBalanceSummaryProps {
   onTokenAction: (token: TokenInfo, action: "purchase" | "ship") => void;
@@ -63,14 +64,14 @@ export const TokenBalanceSummary = ({
   }, [filteredTokens, sortBy]);
 
   // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
+  // const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   setSearchTerm(e.target.value);
+  // };
 
   // Handle sort change
-  const handleSortChange = useCallback((sort: "name" | "price" | "value") => {
-    setSortBy(sort);
-  }, []);
+  // const handleSortChange = useCallback((sort: "name" | "price" | "value") => {
+  //   setSortBy(sort);
+  // }, []);
 
   // Check if user has a balance of a specific token
   const hasBalance = useCallback(
@@ -127,9 +128,8 @@ export const TokenBalanceSummary = ({
       </div>
 
       {/* Search and Filter Controls */}
-      {tokens.length > 0 ? (
+      {/* {tokens.length > 0 && (
         <div className="bg-white rounded-lg space-y-1 sm:space-y-3 flex-shrink-0">
-          {/* Search Input */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg
@@ -174,8 +174,6 @@ export const TokenBalanceSummary = ({
               </button>
             )}
           </div>
-
-          {/* Sort Options */}
           <div className="flex justify-start items-center gap-2">
             <div className="flex">
               <span className="text-xs text-gray-500 mr-2 self-center">
@@ -216,7 +214,9 @@ export const TokenBalanceSummary = ({
             </div>
           </div>
         </div>
-      ) : (
+      ) */}
+
+      {chainId !== sepolia.id && (
         <Button>
           <span className="text-sm sm:text-base">
             Stay tuned for our mainnet launch! Until then, play around on
