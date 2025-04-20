@@ -1,14 +1,13 @@
-import Image from "next/image";
-import { useAccount } from "wagmi";
-import { useState, useMemo, useCallback } from "react";
-import { getTokensForChain, type TokenInfo } from "../addresses";
-import { useTokenBalances } from "../hooks/useTokenBalances";
-import { TokenPriceDisplay } from "./TokenPriceDisplay";
-import { TokenPropertyChip } from "./TokenPropertyChip";
-import { fallbackChainId } from "../utils/chains";
+import { getTokensForChain, type TokenInfo } from "@/addresses";
+import { TokenPriceDisplay } from "@/components/TokenPriceDisplay";
+import { TokenPropertyChip } from "@/components/TokenPropertyChip";
+import { useTokenBalances } from "@/hooks/useTokenBalances";
+import { fallbackChainId } from "@/utils/chains";
+import { useCallback, useMemo, useState } from "react";
 import { useDebounceValue } from "usehooks-ts";
-import { isSupportedNetwork } from "../utils/networks";
+import { useAccount } from "wagmi";
 import { Button } from "./Button";
+import { isSupportedNetwork } from "@/utils/networks";
 import { sepolia } from "viem/chains";
 
 interface TokenBalanceSummaryProps {
@@ -216,7 +215,7 @@ export const TokenBalanceSummary = ({
         </div>
       ) */}
 
-      {chainId !== sepolia.id && (
+      {Boolean(chainId && chainId !== sepolia.id) && (
         <Button>
           <span className="text-sm sm:text-base">
             Stay tuned for our mainnet launch! Until then, play around on
@@ -272,7 +271,7 @@ export const TokenBalanceSummary = ({
                 {/* Token Header */}
                 <div className="flex items-center gap-2">
                   {token.icon ? (
-                    <Image
+                    <img
                       src={token.icon}
                       alt={token.symbol}
                       className="hidden sm:block w-10 h-10 rounded-full flex-shrink-0"

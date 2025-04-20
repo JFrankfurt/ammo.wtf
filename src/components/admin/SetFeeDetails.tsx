@@ -1,10 +1,10 @@
-import ammoFactoryABI from "@/src/abi/ammoFactory";
-import { FACTORY_ADDRESS } from "@/src/addresses";
-import { Button } from "@/src/components/Button";
-import { FormInput } from "@/src/components/FormInput";
-import { getExplorerUrl } from "@/src/utils/blockExplorer";
+import ammoFactoryABI from "@/abi/ammoFactory";
+import { FACTORY_ADDRESS } from "@/addresses";
+import { Button } from "@/components/Button";
+import { FormInput } from "@/components/FormInput";
+import { getExplorerUrl } from "@/utils/blockExplorer";
 import { DialogTitle } from "@headlessui/react";
-import { fallbackChainId } from "@/src/utils/chains";
+import { fallbackChainId } from "@/utils/chains";
 import { useCallback, useEffect, useState } from "react";
 import {
   useAccount,
@@ -12,6 +12,7 @@ import {
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
+import { Address, parseEther } from "viem";
 
 // Define the possible states for the component
 type FeeRecipientState =

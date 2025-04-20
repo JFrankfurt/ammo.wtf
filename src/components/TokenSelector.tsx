@@ -1,7 +1,4 @@
-"use client";
-
-import Image from "next/image";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAccount } from "wagmi";
 import { getTokensForChain, type TokenInfo } from "../addresses";
 import { useTokenBalances } from "../hooks/useTokenBalances";
@@ -166,10 +163,10 @@ export const TokenSelector = ({
             >
               <div className="flex items-start gap-3">
                 {token.icon ? (
-                  <Image
+                  <img
                     src={token.icon}
                     alt={token.symbol}
-                    className="w-10 h-10 flex-shrink-0"
+                    className="w-10 h-10 flex-shrink-0 object-cover rounded-full"
                     width={40}
                     height={40}
                   />

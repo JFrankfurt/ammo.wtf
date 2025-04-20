@@ -1,13 +1,13 @@
+import ammoTokenERC20 from "@/abi/ammoTokenERC20";
+import { getTokensForChain } from "@/addresses";
+import { Button } from "@/components/Button";
+import { FormInput } from "@/components/FormInput";
+import { FormSelect } from "@/components/FormSelect";
+import { truncateAddress } from "@/utils/address";
 import { DialogTitle } from "@headlessui/react";
-import { FormInput } from "@/src/components/FormInput";
-import { Button } from "@/src/components/Button";
-import { useAccount, useWriteContract } from "wagmi";
 import { useCallback, useState } from "react";
-import { TOKEN_ADDRESSES } from "@/src/addresses";
-import { FormSelect } from "@/src/components/FormSelect";
-import { truncateAddress } from "@/src/utils/address";
-import ammoTokenERC20 from "@/src/abi/ammoTokenERC20";
 import { parseEther } from "viem";
+import { useAccount, useWriteContract } from "wagmi";
 
 export function MintAdditionalInventory({ onBack }: { onBack: () => void }) {
   const [tokenAddress, setTokenAddress] = useState("");
@@ -46,7 +46,7 @@ export function MintAdditionalInventory({ onBack }: { onBack: () => void }) {
         onChange={(e) => setTokenAddress(e.target.value)}
         label="Token Address"
         id="tokenAddress"
-        options={TOKEN_ADDRESSES[chainId].map((token) => ({
+        options={getTokensForChain(chainId).map((token) => ({
           value: token.address,
           label: `${token.name} (${truncateAddress(token.address)})`,
         }))}

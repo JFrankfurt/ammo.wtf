@@ -1,16 +1,16 @@
+import ammoFactory from "@/abi/ammoFactory";
+import { FACTORY_ADDRESS } from "@/addresses";
+import { Button } from "@/components/Button";
+import { FormInput } from "@/components/FormInput";
+import { getExplorerUrl } from "@/utils/blockExplorer";
 import { DialogTitle } from "@headlessui/react";
-import { FormInput } from "@/src/components/FormInput";
-import { Button } from "@/src/components/Button";
+import { useCallback, useEffect, useState } from "react";
+import { parseEther } from "viem";
 import {
   useAccount,
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
-import { useCallback, useEffect, useState } from "react";
-import ammoTokenFactory from "@/src/abi/ammoFactory";
-import { FACTORY_ADDRESS } from "@/src/addresses";
-import { parseEther } from "viem";
-import { getExplorerUrl } from "@/src/utils/blockExplorer";
 
 // Define the possible states for the component
 type MintState =
@@ -74,7 +74,7 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
     writeContract(
       {
         address: FACTORY_ADDRESS[chainId],
-        abi: ammoTokenFactory,
+        abi: ammoFactory,
         functionName: "createToken",
         args: [tokenName, tokenSymbol, parseEther(initialSupply)],
       },

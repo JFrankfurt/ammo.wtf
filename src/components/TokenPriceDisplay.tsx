@@ -1,7 +1,7 @@
-import { TokenInfo } from "../addresses";
-import { useUniswapV4Slot0 } from "@/src/hooks";
-import { sqrtPriceX96ToTokenPrices } from "../utils/sqrtPricex96ToPrice";
-import { formatCurrency } from "../utils/formatCurrency";
+import { TokenInfo } from "@/addresses";
+import { useUniswapV4Slot0 } from "@/hooks";
+import { formatCurrency } from "@/utils/formatCurrency";
+import { sqrtPriceX96ToTokenPrices } from "@/utils/sqrtPricex96ToPrice";
 
 interface TokenPriceDisplayProps {
   token: TokenInfo;
