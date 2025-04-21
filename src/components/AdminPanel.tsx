@@ -122,7 +122,7 @@ export default function AdminPanel() {
       {isAdmin && (
         <Button
           variant="primary"
-          className="fixed bottom-4 right-4 z-40"
+          className="fixed top-4 left-4 lg:bottom-4 lg:right-4 z-40"
           onClick={() => setIsOpen(true)}
         >
           Admin
