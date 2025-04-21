@@ -34,3 +34,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated JS in src (should not be committed)
+/src/**/*.js
+/src/*.js
+
+# Vite build output
+/dist
+
+# Errant TSC output
+vite.config.mjs

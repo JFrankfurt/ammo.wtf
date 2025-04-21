@@ -1,0 +1,47 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Or your default branch
+  workflow_dispatch: # Allows manual triggering
+
+permissions:
+  contents: read
+  pages: write # Needed to deploy to GitHub Pages
+  id-token: write # Needed for OIDC token if using that (optional but recommended)
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Match your development environment
+          cache: "yarn"
+
+      - name: Install dependencies 📦
+        run: yarn install --frozen-lockfile
+
+      - name: Build project 🏗️
+        run: yarn build
+
+      # This step is usually not needed if CNAME is in public/
+      # but added for robustness in case GitHub Pages settings change.
+      # It ensures the CNAME file exists in the build output.
+      - name: Ensure CNAME exists  CNAME
+        run: echo "ammo.wtf" > dist/CNAME
+
+      - name: Deploy to GitHub Pages 🚀
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          # publish_branch: gh-pages # Default is gh-pages
+          # cname: ammo.wtf # Handled by file in publish_dir
+          user_name: "github-actions[bot]" # Optional: Committer name
+          user_email: "github-actions[bot]@users.noreply.github.com" # Optional: Committer email
