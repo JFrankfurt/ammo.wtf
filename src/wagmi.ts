@@ -12,7 +12,7 @@ export const config = getDefaultConfig({
     // @ts-ignore
     [base.id]: http(),
   },
-  ssr: true,
+  ssr: false,
 });
 
 declare module "wagmi" {
