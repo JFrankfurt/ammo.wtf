@@ -122,8 +122,13 @@ export default function AdminPanel() {
       {isAdmin && (
         <Button
           variant="primary"
-          className="fixed top-4 left-4 lg:bottom-4 lg:right-4 z-40"
+          className={cn(
+            "fixed z-40 p-2",
+            "top-4 left-4",
+            "lg:top-auto lg:left-auto lg:bottom-4 lg:right-4"
+          )}
           onClick={() => setIsOpen(true)}
+          aria-label="Open Admin Panel"
         >
           Admin
         </Button>
