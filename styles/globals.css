@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    /* Apply hacker vibe defaults: text-xs, text-muted, font-mono stack */
+    @apply bg-background text-muted text-xs font-mono min-h-screen;
+  }
+}
+
 /* Hide number input arrows */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
@@ -12,3 +19,11 @@ input::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/*
+Refactoring Thoughts for globals.css:
+
+1. Global Background/Text: Moved the core background (`bg-background`) and text (`text-foreground`) application from the `HomePage` div to the `body` element within a `@layer base`. This is generally the best practice for applying base page styles in Tailwind.
+2. `min-h-screen`: Also applied `min-h-screen` to the `body` to ensure the background covers the full viewport height consistently.
+3. Canvas Visibility: By applying the background to the `body`, the `div` in `HomePage` no longer needs `bg-background`. This should allow the `GravitationalCubes` canvas to render correctly *underneath* the `HomePage` content, assuming the canvas itself is transparent or doesn't draw its own opaque background.
+*/

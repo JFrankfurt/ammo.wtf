@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Button } from "./Button";
 import { TokenInfo } from "../addresses";
+import { cn } from "../utils/cn";
 
 interface ShippingFormContentsProps {
   selectedTokens: TokenInfo[];
@@ -29,34 +30,36 @@ export const ShippingFormContents = ({
     <div className="space-y-4 md:space-y-6">
       {balancesLoading ? (
         <div className="flex justify-center items-center py-8 md:py-12">
-          <div className="animate-spin rounded-full h-8 w-8 md:h-10 md:w-10 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading your tokens...</span>
+          <div className="animate-spin rounded-full h-8 w-8 md:h-10 md:w-10 border-b-2 border-accentGreen"></div>
+          <span className="ml-3 text-muted font-mono">
+            Loading your tokens...
+          </span>
         </div>
       ) : selectedTokens.length === 0 ? (
         <div className="text-center py-8 md:py-12 px-4">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-muted"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            strokeWidth={1}
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M20 12H4M8 16l-4-4 4-4M16 16l4-4-4-4"
+              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0zM8.25 9.75h7.5v4.5h-7.5z"
             />
           </svg>
-          <h3 className="mt-2 text-base font-medium text-gray-900">
+          <h3 className="mt-2 font-medium text-foreground font-mono">
             No Ammunition Tokens
           </h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-muted font-mono">
             You don&apos;t have any ammunition tokens to ship.
           </p>
         </div>
       ) : (
         <div className="space-y-3 md:space-y-4">
-          <div className="mb-2 text-sm font-medium text-gray-700">
+          <div className="mb-2 font-medium text-muted">
             Select the quantity of each token to ship:
           </div>
 
@@ -64,13 +67,13 @@ export const ShippingFormContents = ({
             {selectedTokens.map((token) => (
               <div
                 key={token.address}
-                className="p-3 md:p-4 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                className="p-3 md:p-4 border border-border rounded-none bg-muted/10 hover:bg-muted/20 transition-colors"
               >
                 <div className="flex justify-between items-center mb-2 md:mb-3">
-                  <div className="font-medium text-sm md:text-base truncate pr-2">
+                  <div className="font-medium text-foreground font-mono truncate pr-2">
                     {token.name}
                   </div>
-                  <div className="text-xs md:text-sm text-gray-500">
+                  <div className="text-muted font-mono">
                     Balance: {tokenBalances[token.address]?.toFixed(2) || "0"}
                   </div>
                 </div>
@@ -91,7 +94,7 @@ export const ShippingFormContents = ({
                           parseInt(e.target.value)
                         )
                       }
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      className="w-full h-1.5 bg-border rounded-full appearance-none cursor-pointer accent-accentGreen"
                     />
                   </div>
                   <div className="w-16 md:w-20">
@@ -108,20 +111,29 @@ export const ShippingFormContents = ({
                           parseInt(e.target.value)
                         )
                       }
-                      className="w-full px-2 py-1 text-xs md:text-sm border border-gray-300 rounded-md"
+                      className={cn(
+                        "w-full",
+                        "h-8 px-2 py-1",
+                        "text-xs font-mono",
+                        "border border-border",
+                        "rounded-none",
+                        "bg-input",
+                        "text-foreground",
+                        "placeholder:text-muted",
+                        "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
+                      )}
                     />
                   </div>
                 </div>
 
-                <div className="mt-2 md:mt-3 text-xs md:text-sm text-gray-600">
-                  <span className="font-medium">
+                <div className="mt-2 md:mt-3 text-xs text-muted">
+                  <span className="font-medium font-mono">
                     {(quantities[token.address] || 0) * 250} rounds
                   </span>{" "}
                   selected
-                  <span className="ml-1 text-gray-500">
-                    ($
-                    {((quantities[token.address] || 0) * 250 * 10.0).toFixed(2)}
-                    )
+                  <span className="ml-1 font-mono text-muted/80">
+                    (~$
+                    {((quantities[token.address] || 0) * 250 * 0.3).toFixed(2)})
                   </span>
                 </div>
               </div>
@@ -129,20 +141,20 @@ export const ShippingFormContents = ({
           </div>
 
           {/* Order Summary */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="flex justify-between items-center mb-2">
-              <div className="text-sm md:text-base font-medium">
+          <div className="mt-4 pt-4 border-t border-border text-xs">
+            <div className="flex justify-between items-center mb-1">
+              <div className="font-medium text-muted font-mono">
                 Total Rounds:
               </div>
-              <div className="text-sm md:text-base font-bold">
+              <div className="font-bold text-accentGreen font-mono">
                 {totalTokens}
               </div>
             </div>
             <div className="flex justify-between items-center">
-              <div className="text-sm md:text-base font-medium">
-                Estimated Value:
+              <div className="font-medium text-muted font-mono">
+                Est. Value (USD):
               </div>
-              <div className="text-sm md:text-base font-bold">
+              <div className="font-bold text-accentGreen font-mono">
                 ${totalValueUsd.toFixed(2)}
               </div>
             </div>
@@ -153,13 +165,13 @@ export const ShippingFormContents = ({
             <Button
               onClick={onContinue}
               disabled={!hasSelectedQuantities}
-              className="w-full py-2.5"
+              className="w-full"
             >
               Continue to Shipping
             </Button>
-            <div className="mt-3 text-xs md:text-sm text-center text-gray-500 flex items-center justify-center">
+            <div className="mt-3 text-center text-xs text-muted flex items-center justify-center font-mono">
               <svg
-                className="h-4 w-4 mr-1 text-gray-400"
+                className="h-4 w-4 mr-1 text-muted flex-shrink-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"

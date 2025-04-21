@@ -17,11 +17,11 @@ export const WalletErrorDisplay = ({
 
   return (
     <div
-      className={`rounded-lg border border-red-200 bg-red-50 p-4 ${className}`}
+      className={`rounded-none border border-destructive bg-destructive/10 p-3 text-xs ${className}`}
     >
-      <div className="flex items-center mb-2">
+      <div className="flex items-center mb-1">
         <svg
-          className="w-5 h-5 text-red-500 mr-2"
+          className="w-4 h-4 text-destructive mr-2 flex-shrink-0"
           fill="currentColor"
           viewBox="0 0 20 20"
           xmlns="http://www.w3.org/2000/svg"
@@ -32,22 +32,26 @@ export const WalletErrorDisplay = ({
             clipRule="evenodd"
           ></path>
         </svg>
-        <span className="font-medium text-red-700">{formattedError.title}</span>
+        <span className="font-medium font-mono text-destructive">
+          {formattedError.title}
+        </span>
       </div>
 
-      <p className="text-gray-700 mb-2">{formattedError.message}</p>
+      <p className="text-muted font-mono mb-1.5 ml-6">
+        {formattedError.message}
+      </p>
 
       {formattedError.details && (
-        <div className="mt-2">
+        <div className="mt-1.5 ml-6">
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="text-sm text-blue-600 hover:text-blue-800 focus:outline-none"
+            className="text-xs font-mono text-muted hover:text-foreground underline focus:outline-none"
           >
             {showDetails ? "Hide details" : "Show details"}
           </button>
 
           {showDetails && (
-            <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono overflow-x-auto max-h-32 text-gray-700">
+            <div className="mt-1.5 p-2 bg-muted/20 rounded-none border border-border text-xs font-mono overflow-x-auto max-h-32 text-muted">
               {formattedError.details}
             </div>
           )}

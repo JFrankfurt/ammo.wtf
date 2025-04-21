@@ -1,4 +1,3 @@
-"use client";
 import {
   Dialog,
   DialogPanel,
@@ -12,12 +11,13 @@ import { MintAdditionalInventory } from "./admin/MintAdditionalInventory";
 import { MintNewTokenType } from "./admin/MintNewTokenType";
 import { SetFeeDetails } from "./admin/SetFeeDetails";
 import { Button } from "./Button";
+import { cn } from "@/utils/cn";
 
 type AdminView = "main" | "mintNew" | "mintMore" | "setFee";
 
 const ADMIN_ACCOUNTS = [
-  "0x087A59EF79152a3143b6a4e87DC8B46e84D900B7",
-  "0x48c89d77ae34ae475e4523b25ab01e363dce5a78",
+  "0x087A59EF79152a3143b6a4e87DC8B46e84D900B7".toLowerCase(),
+  "0x48c89d77ae34ae475e4523b25ab01e363dce5a78".toLowerCase(),
 ];
 
 export default function AdminPanel() {
@@ -27,7 +27,7 @@ export default function AdminPanel() {
 
   const handleClose = () => {
     setIsOpen(false);
-    setCurrentView("main");
+    setTimeout(() => setCurrentView("main"), 300);
   };
 
   const renderContent = () => {
@@ -43,30 +43,26 @@ export default function AdminPanel() {
       default:
         return (
           <div className="space-y-4">
-            <DialogTitle className="text-xl md:text-2xl font-medium text-sumiBlack">
+            <DialogTitle className="text-lg md:text-xl font-bold text-accentGreen">
               Admin Panel
             </DialogTitle>
             <div className="flex flex-col gap-3">
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => setCurrentView("mintNew")}
-              >
+              <Button fullWidth onClick={() => setCurrentView("mintNew")}>
                 Mint New Token Type
               </Button>
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => setCurrentView("mintMore")}
-              >
+              <Button fullWidth onClick={() => setCurrentView("mintMore")}>
                 Mint Additional Inventory
               </Button>
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => setCurrentView("setFee")}
-              >
+              <Button fullWidth onClick={() => setCurrentView("setFee")}>
                 Set Fee Details
+              </Button>
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={handleClose}
+                className="mt-2"
+              >
+                Close
               </Button>
             </div>
           </div>
@@ -74,20 +70,48 @@ export default function AdminPanel() {
     }
   };
 
+  const isAdmin = ADMIN_ACCOUNTS.includes(
+    (address?.toLowerCase() as `0x${string}`) || ""
+  );
+
   return (
     <>
       <Transition show={isOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={handleClose}>
-          <TransitionChild as={Fragment}>
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
             <div
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm transition duration-300 data-[closed]:opacity-0"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm"
               aria-hidden="true"
             />
           </TransitionChild>
 
-          <div className="fixed inset-0 flex items-center justify-center p-3 md:p-4">
-            <TransitionChild as={Fragment}>
-              <DialogPanel className="w-full max-w-md transform overflow-hidden rounded-xl md:rounded-2xl bg-shiroWhite p-4 md:p-6 shadow-xl transition-all duration-300 ease-out data-[closed]:opacity-0 data-[closed]:scale-95">
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <TransitionChild
+              as={Fragment}
+              enter="ease-out duration-200"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-150"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <DialogPanel
+                className={cn(
+                  "w-full max-w-md transform overflow-hidden",
+                  "rounded-md",
+                  "bg-background",
+                  "p-4 md:p-6",
+                  "border border-border"
+                )}
+              >
                 {renderContent()}
               </DialogPanel>
             </TransitionChild>
@@ -95,15 +119,13 @@ export default function AdminPanel() {
         </Dialog>
       </Transition>
 
-      {ADMIN_ACCOUNTS.includes(
-        ((address as `0x${string}`) || "").toLowerCase()
-      ) && (
+      {isAdmin && (
         <Button
           variant="primary"
-          className="fixed bottom-4 right-4 shadow-lg"
-          onClick={() => setIsOpen(!isOpen)}
+          className="fixed bottom-4 right-4 z-40"
+          onClick={() => setIsOpen(true)}
         >
-          Admin Panel
+          Admin
         </Button>
       )}
     </>

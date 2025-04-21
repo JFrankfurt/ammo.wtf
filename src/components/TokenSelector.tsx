@@ -4,6 +4,7 @@ import { getTokensForChain, type TokenInfo } from "../addresses";
 import { useTokenBalances } from "../hooks/useTokenBalances";
 import { FormInput } from "./FormInput";
 import { FormSelect } from "./FormSelect";
+import { cn } from "../utils/cn"; // Import cn
 
 interface TokenSelectorProps {
   onSelectToken: (token: TokenInfo) => void;
@@ -18,7 +19,7 @@ export const TokenSelector = ({
 }: TokenSelectorProps) => {
   const { address, chainId } = useAccount();
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "caliber" | "price">("name");
+  const [sortBy, setSortBy] = useState<"name" | "caliber">("name");
 
   // Get all tokens for the current chain
   const allTokens = useMemo(() => {
@@ -72,10 +73,6 @@ export const TokenSelector = ({
         if (!a.caliber) return 1; // Move items without caliber to the end
         if (!b.caliber) return -1; // Move items without caliber to the end
         return a.caliber.localeCompare(b.caliber);
-      } else if (sortBy === "price") {
-        // priceUsd is no longer supported, using fixed price for sorting
-        // All tokens have the same fixed price of $10.00
-        return 0; // No sorting by price since all prices are the same
       }
       return 0;
     });
@@ -90,70 +87,77 @@ export const TokenSelector = ({
 
   return (
     <div className="w-full">
-      {/* Search and filter controls */}
-      <div className="mb-5 space-y-4">
+      {/* Search and filter controls - Use themed FormInput/Select */}
+      <div className="mb-4 space-y-3">
         <FormInput
           label="Search"
-          placeholder="Search ammunition..."
+          placeholder="Search name, symbol, caliber..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          sizeVariant="small" // Use small variant for text-xs
         />
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <div className="flex items-center">
-            <FormSelect
-              label="Sort by"
-              options={[
-                { value: "name", label: "Name" },
-                { value: "caliber", label: "Caliber" },
-                { value: "price", label: "Price" },
-              ]}
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full sm:w-auto"
-            />
-          </div>
+          <FormSelect
+            label="Sort by"
+            options={[
+              { value: "name", label: "Name" },
+              { value: "caliber", label: "Caliber" },
+              // { value: "price", label: "Price" }, // Price sorting disabled
+            ]}
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "name" | "caliber")}
+            sizeVariant="small" // Use small variant for text-xs
+            className="w-full sm:w-auto"
+          />
 
-          <div className="text-sm text-gray-500 mt-2 sm:mt-0">
-            {filteredTokens.length}{" "}
-            {filteredTokens.length === 1 ? "item" : "items"}
+          {/* Item count - themed */}
+          <div className="text-xs font-mono text-muted mt-2 sm:mt-0">
+            {filteredTokens.length} item{filteredTokens.length === 1 ? "" : "s"}
           </div>
         </div>
       </div>
 
       {/* Token list */}
       {filteredTokens.length === 0 ? (
-        <div className="text-center py-10 bg-gray-50 rounded-lg">
+        // No results state - themed
+        <div className="text-center py-8 px-4 bg-muted/10 rounded-none border border-border">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 bg-muted/20 rounded-none flex items-center justify-center">
+              {/* Icon - themed */}
               <svg
-                className="w-8 h-8 text-gray-400"
+                className="w-6 h-6 text-muted"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                strokeWidth={1.5}
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-3"
                 />
               </svg>
             </div>
             <div>
-              <p className="text-gray-700 font-medium">No ammunition found</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Try adjusting your search criteria
+              {/* Text - themed */}
+              <p className="text-foreground font-medium font-mono text-sm">
+                No ammunition found
+              </p>
+              <p className="text-xs text-muted font-mono mt-1">
+                Try adjusting search or sort options
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+        // Token list container - themed scrollbar potentially
+        <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
           {filteredTokens.map((token) => (
+            // List item - themed
             <div
               key={token.address}
-              className="border border-gray-200 rounded-xl p-4 hover:bg-blue-50 transition-all cursor-pointer bg-white"
+              className="border border-border rounded-none p-3 hover:bg-muted/20 bg-muted/10 transition-all cursor-pointer"
               onClick={() =>
                 onSelectToken({
                   ...token,
@@ -162,53 +166,55 @@ export const TokenSelector = ({
               }
             >
               <div className="flex items-start gap-3">
+                {/* Icon - themed */}
                 {token.icon ? (
                   <img
                     src={token.icon}
                     alt={token.symbol}
-                    className="w-10 h-10 flex-shrink-0 object-cover rounded-full"
-                    width={40}
-                    height={40}
+                    className="w-8 h-8 flex-shrink-0 object-cover rounded-full"
+                    width={32}
+                    height={32}
                   />
                 ) : (
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex-shrink-0 flex items-center justify-center text-blue-700 font-bold">
+                  <div className="w-8 h-8 bg-muted/30 rounded-full flex-shrink-0 flex items-center justify-center text-foreground font-bold font-mono text-xs">
                     {token.symbol.slice(0, 2)}
                   </div>
                 )}
 
                 <div className="flex-grow min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                     <div className="min-w-0">
-                      <div className="font-medium text-gray-800 truncate">
+                      {/* Symbol - themed */}
+                      <div className="font-medium text-foreground font-mono text-sm truncate">
                         {token.symbol}
                       </div>
+                      {/* Name - themed */}
                       <div
-                        className="text-sm text-gray-600 truncate"
+                        className="text-xs text-muted font-mono truncate"
                         title={token.name}
                       >
                         {token.name}
                       </div>
                     </div>
 
-                    {/* priceUsd is no longer supported, showing fixed price */}
-                    <div className="text-xs font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full whitespace-nowrap self-start">
-                      $10.00
+                    {/* Price chip - themed */}
+                    <div className="text-xs font-mono bg-muted/20 text-muted px-2 py-0.5 rounded-full whitespace-nowrap self-start sm:self-center">
+                      $10.00 {/* Assuming fixed price */}
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {/* Caliber chip - themed */}
                     {token.caliber && (
-                      <div className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full flex items-center gap-1">
-                        <span>{token.caliber}</span>
+                      <div className="text-xs font-mono bg-muted/20 text-muted px-2 py-0.5 rounded-full">
+                        {token.caliber}
                       </div>
                     )}
 
+                    {/* Balance chip - themed */}
                     {tokenBalances[token.address] > 0 && (
-                      <div className="text-xs font-medium bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1 ml-auto">
-                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                        <span>
-                          {tokenBalances[token.address].toLocaleString()}
-                        </span>
+                      <div className="text-xs font-mono bg-accentGreen/10 text-accentGreen px-2 py-0.5 rounded-full ml-auto">
+                        {tokenBalances[token.address].toLocaleString()} bal.
                       </div>
                     )}
                   </div>

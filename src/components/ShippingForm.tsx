@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Dialog,
   DialogPanel,
@@ -246,7 +244,7 @@ export const ShippingForm = ({
       >
         <TransitionChild as={Fragment}>
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition duration-300 data-[closed]:opacity-0"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition duration-300 data-[closed]:opacity-0"
             aria-hidden="true"
           />
         </TransitionChild>
@@ -254,11 +252,11 @@ export const ShippingForm = ({
         {/* Full screen container with scrolling */}
         <div className="fixed inset-0 flex flex-col items-center justify-start overflow-y-auto p-3 md:p-4 lg:p-6">
           <TransitionChild as={Fragment}>
-            <DialogPanel className="w-full max-w-md md:max-w-lg lg:max-w-xl transform overflow-auto rounded-xl md:rounded-2xl bg-white p-4 md:p-6 shadow-xl transition-all duration-300 ease-out data-[closed]:opacity-0 data-[closed]:scale-95 my-4 md:my-8">
+            <DialogPanel className="w-full max-w-md md:max-w-lg lg:max-w-xl transform overflow-auto rounded-none bg-background border border-border p-4 md:p-6 transition-all duration-300 ease-out data-[closed]:opacity-0 data-[closed]:scale-95 my-4 md:my-8">
               <div className="flex justify-between items-center mb-4">
                 <DialogTitle
                   as="h3"
-                  className="text-base md:text-lg font-medium leading-6 text-gray-900"
+                  className="text-lg font-mono font-bold text-accentGreen"
                 >
                   {step === "contents"
                     ? "Select Ammunition to Ship"
@@ -269,7 +267,7 @@ export const ShippingForm = ({
                 {Boolean(!isSubmitting && !isConfirming) && (
                   <CloseButton
                     type="button"
-                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                    className="text-muted hover:text-foreground focus:outline-none"
                     aria-label="Close"
                   >
                     <svg

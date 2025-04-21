@@ -19,35 +19,57 @@ export const SimpleTransactionStatus = ({
   hash?: `0x${string}`;
   chainId?: number;
 }) => {
-  if (!hash && !error && !isPending) return null;
+  if (!hash && !error && !isPending && !isConfirming) return null;
 
   return (
-    <div>
+    <div className="p-3 bg-muted/10 border border-border rounded-none text-xs space-y-2">
       {isPending && (
-        <div className="flex items-center text-blue-600">
-          <span className="mr-2">Waiting for confirmation...</span>
-          <span className="animate-spin">⏳</span>
+        <div className="flex items-center text-muted font-mono">
+          <svg
+            className="animate-spin h-3.5 w-3.5 mr-2 text-accentGreen"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              d="M12 2 L12 5 M12 19 L12 22 M5 12 L2 12 M22 12 L19 12 M19.07 4.93 L16.95 7.05 M7.05 16.95 L4.93 19.07 M19.07 19.07 L16.95 16.95 M7.05 7.05 L4.93 4.93"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span>Waiting for wallet confirmation...</span>
         </div>
       )}
 
       {isConfirming && (
-        <div className="flex items-center text-blue-600">
-          <span className="mr-2">Transaction confirming...</span>
-          <span className="animate-spin">⏳</span>
+        <div className="flex items-center text-muted font-mono">
+          <svg
+            className="animate-spin h-3.5 w-3.5 mr-2 text-accentGreen"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              d="M12 2 L12 5 M12 19 L12 22 M5 12 L2 12 M22 12 L19 12 M19.07 4.93 L16.95 7.05 M7.05 16.95 L4.93 19.07 M19.07 19.07 L16.95 16.95 M7.05 7.05 L4.93 4.93"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span>Transaction confirming...</span>
         </div>
       )}
 
       {isError && <WalletErrorDisplay error={error} />}
 
       {hash && (
-        <div className="text-sm text-gray-600 mt-2">
+        <div className="text-muted font-mono">
           <a
             href={`${getExplorerUrl(chainId)}/tx/${hash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
+            className="text-accentGreen hover:underline"
           >
-            View transaction
+            View transaction ↗
           </a>
         </div>
       )}

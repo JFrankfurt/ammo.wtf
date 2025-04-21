@@ -4,7 +4,7 @@ import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-  base: "/ammo.wtf/",
+  base: "/",
   plugins: [
     react(),
     tsconfigPaths()
@@ -12,6 +12,22 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('wagmi') || id.includes('@wagmi') || id.includes('@rainbow-me/rainbowkit')) {
+              return 'vendor-web3';
+            }
+            if (id.includes('@tanstack/react-query')) {
+              return 'vendor-react-query';
+            }
+          }
+        },
+      },
     },
   },
 }) 

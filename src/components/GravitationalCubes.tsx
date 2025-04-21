@@ -1,5 +1,3 @@
-"use client";
-
 import { useGLTF } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
@@ -10,7 +8,15 @@ import {
 } from "@react-three/rapier";
 import React, { useCallback, useState } from "react";
 
-import * as THREE from "three";
+import {
+  Vector3,
+  Euler,
+  ShaderMaterial,
+  FrontSide,
+  Mesh,
+  Vector2,
+  Raycaster,
+} from "three";
 
 const CENTER_RADIUS = 1;
 const GRAVITY_STRENGTH = 4;
@@ -19,13 +25,13 @@ const INITIAL_LINEAR_VELOCITY_MAG = 3;
 
 interface SpawnedObject {
   ref: React.RefObject<RapierRigidBody>;
-  position: THREE.Vector3;
-  rotation?: THREE.Euler;
+  position: Vector3;
+  rotation?: Euler;
 }
 
 function CenterSphere() {
   const shaderMaterial = React.useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       vertexShader: `
         varying vec3 vNormal;
         varying vec3 vPosition;
@@ -48,7 +54,7 @@ function CenterSphere() {
         time: { value: 0 },
       },
       transparent: false,
-      side: THREE.FrontSide,
+      side: FrontSide,
     });
   }, []);
   return (
@@ -69,7 +75,7 @@ const ImportedModel = React.forwardRef<RapierRigidBody, RigidBodyProps>(
     const clonedScene = React.useMemo(() => scene.clone(true), [scene]);
 
     const customMaterial = React.useMemo(() => {
-      return new THREE.ShaderMaterial({
+      return new ShaderMaterial({
         vertexShader: `
           varying vec3 vNormal;
           varying vec3 vPosition;
@@ -92,8 +98,8 @@ const ImportedModel = React.forwardRef<RapierRigidBody, RigidBodyProps>(
 
     React.useEffect(() => {
       clonedScene.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          (child as THREE.Mesh).material = customMaterial;
+        if ((child as Mesh).isMesh) {
+          (child as Mesh).material = customMaterial;
         }
       });
     }, [clonedScene, customMaterial]);
@@ -111,7 +117,7 @@ const ImportedModel = React.forwardRef<RapierRigidBody, RigidBodyProps>(
 );
 ImportedModel.displayName = "ImportedModel";
 
-const initialObjectPosition = new THREE.Vector3(
+const initialObjectPosition = new Vector3(
   (Math.random() * 2.0 - 1.0) * 15,
   (Math.random() * 2.0 - 1.0) * 15,
   Math.random() * 15 - 7.5
@@ -127,7 +133,7 @@ function Scene() {
   const { camera, size } = useThree();
   const [objects, setObjects] = useState<SpawnedObject[]>([initialObject]);
 
-  const center = new THREE.Vector3(0, 0, 0);
+  const center = new Vector3(0, 0, 0);
 
   // Apply custom gravity force towards center each frame
   useFrame(() => {
@@ -135,11 +141,12 @@ function Scene() {
       const body = ref.current;
       if (!body) continue;
       const pos = body.translation();
-      const bodyPos = new THREE.Vector3(pos.x, pos.y, pos.z);
+      const bodyPos = new Vector3(pos.x, pos.y, pos.z);
 
       // Direction from object to center
-      const dir = new THREE.Vector3().subVectors(center, bodyPos);
+      const dir = new Vector3().subVectors(center, bodyPos);
       const distance = dir.length();
+      if (distance < 0.1) continue; // Avoid division by zero or huge forces near center
       dir.normalize();
 
       const forceMagnitude = GRAVITY_STRENGTH / (distance * distance);
@@ -152,21 +159,21 @@ function Scene() {
   const handleClick = useCallback(
     (e: MouseEvent) => {
       // Convert mouse position to normalized device coordinates (-1 to +1)
-      const mouse = new THREE.Vector2(
+      const mouse = new Vector2(
         (e.clientX / size.width) * 2 - 1,
         -(e.clientY / size.height) * 2 + 1
       );
 
       // Create ray caster and set it up with camera and mouse position
-      const raycaster = new THREE.Raycaster();
+      const raycaster = new Raycaster();
       raycaster.setFromCamera(mouse, camera);
 
       // Calculate position 15 units along the ray
-      const position = new THREE.Vector3();
+      const position = new Vector3();
       raycaster.ray.at(15, position);
 
       // Generate random rotation in radians (0 to 2π)
-      const rotation = new THREE.Euler(
+      const rotation = new Euler(
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2
@@ -204,13 +211,13 @@ function Scene() {
   return (
     <>
       {/* @ts-ignore */}
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={0.6} />
       {/* @ts-ignore */}
-      <pointLight position={[10, 10, 10]} />
+      <pointLight position={[10, 10, 10]} intensity={1.0} />
       <CenterSphere />
 
       {objects.map(({ ref, position, rotation }, i) => {
-        const toCenter = new THREE.Vector3()
+        const toCenter = new Vector3()
           .copy(position)
           .multiplyScalar(-1)
           .normalize()
@@ -244,7 +251,7 @@ function Scene() {
 
 export default function GravityObjects() {
   return (
-    <div className="fixed -z-10 inset-0 w-full h-full overflow-hidden bg-kumoGray animate-bgCycle">
+    <div className="fixed -z-10 inset-0 w-full h-full overflow-hidden">
       <Canvas frameloop="demand" performance={{ min: 0.5 }} dpr={[1, 2]}>
         <Physics gravity={[0, 0, 0]}>
           <Scene />

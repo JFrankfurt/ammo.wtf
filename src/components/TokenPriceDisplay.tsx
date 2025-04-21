@@ -2,6 +2,7 @@ import { TokenInfo } from "@/addresses";
 import { useUniswapV4Slot0 } from "@/hooks";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { sqrtPriceX96ToTokenPrices } from "@/utils/sqrtPricex96ToPrice";
+import { cn } from "@/utils/cn";
 
 interface TokenPriceDisplayProps {
   token: TokenInfo;
@@ -20,13 +21,15 @@ export const TokenPriceDisplay = ({ token }: TokenPriceDisplayProps) => {
   // Render different UI states based on data availability
   return (
     <div className="flex flex-row gap-1 md:gap-2 items-center">
-      <span className="text-gray-500 dark:text-gray-400 text-sm">Price:</span>
+      <span className="text-muted text-xs">Price:</span>
       {isLoading ? (
-        <span className="text-gray-400 text-sm animate-pulse">Loading...</span>
+        <span className="text-muted/70 text-xs animate-pulse">Loading...</span>
       ) : sqrtPriceX96 && price0 ? (
-        <span className="font-medium">{formatCurrency(price0)}</span>
+        <span className="font-mono text-xs text-accentGreen">
+          {formatCurrency(price0)}
+        </span>
       ) : (
-        <span className="text-gray-400 text-sm">Not available</span>
+        <span className="text-muted/70 text-xs">N/A</span>
       )}
     </div>
   );
@@ -36,3 +39,14 @@ export const TokenPriceDisplay = ({ token }: TokenPriceDisplayProps) => {
 // It fetches the sqrtPriceX96 value and converts it to human-readable prices.
 // The UI is designed to match the parent TokenBalanceSummary component's style
 // while providing clear feedback about the loading and error states.
+
+/*
+TokenPriceDisplay Refactoring:
+1. Changed text colors to use theme variables:
+   - Regular text to 'text-muted'
+   - Loading/unavailable states to 'text-muted/70' (slightly dimmer)
+   - Prices to 'text-accentGreen' to emphasize their importance
+2. Applied 'font-mono' to price display to match the tech/hacker aesthetic
+3. Made text slightly smaller with 'text-xs' for a more dense, data-rich feel
+4. Simplified "Not available" to "N/A" for a more technical, concise display
+*/

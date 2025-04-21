@@ -1,6 +1,4 @@
-"use client";
-
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, midnightTheme } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -15,7 +13,17 @@ export function Providers(props: { children: ReactNode }) {
       {/* @ts-ignore */}
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider>{props.children}</RainbowKitProvider>
+          <RainbowKitProvider
+            theme={midnightTheme({
+              accentColor: "#00FF00",
+              accentColorForeground: "#0D0D0D",
+              borderRadius: "none",
+              fontStack: "system",
+              overlayBlur: "none",
+            })}
+          >
+            {props.children}
+          </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
     </>
