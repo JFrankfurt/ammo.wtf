@@ -2,6 +2,7 @@ import react from '@vitejs/plugin-react-swc'
 import path from 'path'
 import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import { Buffer } from 'buffer'
 
 export default defineConfig({
   base: "/",
@@ -12,7 +13,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'buffer': 'buffer/',
     },
+  },
+  define: {
+    'globalThis.Buffer': Buffer,
   },
   build: {
     rollupOptions: {

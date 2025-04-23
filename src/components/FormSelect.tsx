@@ -167,20 +167,3 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
 );
 
 FormSelect.displayName = "FormSelect";
-
-/*
-Refactoring Thoughts for FormSelect.tsx:
-
-1.  Theme Alignment: Similar to FormInput, replaced hardcoded theme values with semantic references from the Tailwind config (`bg-form-input-background`, `text-form-label`, `border-form-input-border`, `rounded-md`, etc.).
-2.  Focus State: Implemented the standard `focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background` pattern for consistent focus indication using the theme's `ring` color.
-3.  Error & Disabled States: Applied theme colors (`border-form-error`, `disabled:bg-form-input-disabled/50`, `disabled:text-muted`) for error and disabled states, mirroring the FormInput changes.
-4.  Sizing: Used the same `getSizeClasses` logic as FormInput, adapting the class names for the `<select>` element and adding right padding (`pr-8`) to the size classes to accommodate the custom dropdown arrow. **Standardized all text sizes to `text-xs` for consistency and a denser UI feel.**
-5.  Custom Arrow:
-    *   Added `appearance-none` to the `<select>` element to hide the default browser dropdown arrow.
-    *   Added a `relative` div wrapper around the select and arrow.
-    *   Included an absolutely positioned `div` containing a basic SVG arrow. This arrow is styled using `text-form-input-text` to match the select's text color.
-    *   This provides a consistent arrow appearance across browsers, fitting the custom theme better than default browser styles. Styling the arrow in a disabled state purely with CSS might be tricky without `:has()` support or JS.
-6.  Accessibility: Ensured `id` is handled correctly using `React.useId()` for `label` (`htmlFor`) and `select` (`id`) association.
-7.  Placeholder: Added logic to include the `placeholder` as the first, disabled option if provided.
-8.  Structure: Used `cn` utility and maintained similar structure to FormInput for consistency.
-*/

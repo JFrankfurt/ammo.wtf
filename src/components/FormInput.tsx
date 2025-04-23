@@ -2,7 +2,7 @@ import React, { forwardRef } from "react";
 import { cn } from "../utils/cn"; // Assuming cn handles class merging
 
 interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label?: string;
   error?: string | { message?: string } | any; // Keep flexible error type for now
   // Retain size variants, potentially useful
   sizeVariant?: "default" | "small" | "compact";
@@ -125,27 +125,3 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
 );
 
 FormInput.displayName = "FormInput";
-
-/*
-Refactoring Thoughts for FormInput.tsx:
-
-1.  Semantic Colors & Theme Values:
-    *   Replaced direct color/theme references (e.g., `text-kuroganeSteel`, `border-form-input-border`, `bg-shiroWhite`, `rounded-form`) with values derived from the updated Tailwind config (`text-form-label`, `border-form-input-border`, `bg-form-input-background`, `text-form-error`, `rounded-md`). This ensures the component adapts to the theme.
-    *   Specifically used `form.*` colors where appropriate (e.g., `bg-form-input-background`, `text-form-input-text`, `border-form-input-border`, `placeholder:text-form-input-placeholder`).
-2.  Focus State:
-    *   Updated focus styling to use the standard Tailwind ring utilities (`focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background`). This provides a consistent focus indicator using the theme's `ring` color (`accentGreen`).
-    *   Removed the previous `focus:border-form-input-focus` and `focus:ring-form-input-focus/20` as the ring utility handles the focus indication more robustly. Ensured the border color reverts to the default on focus, letting the ring be the primary indicator.
-3.  Error State:
-    *   Simplified the error border logic to directly use `border-form-error` (which maps to `accentRed`) when `errorMessage` is present.
-4.  Disabled State:
-    *   Updated disabled styles to use theme colors (`disabled:bg-form-input-disabled/50`, `disabled:text-muted`) for consistency. Added a faint border color for disabled state.
-5.  Sizing Logic:
-    *   Refactored `getSizeClasses` to use standard Tailwind font/size utilities (`text-xs`, `text-sm`) where possible, making it less reliant on custom theme values (like `text-form-label`, `h-form-input-height`) which were removed or simplified in the theme config.
-    *   Used more standard height/padding values (`h-10 px-3 py-2` for default) which align well with Tailwind's defaults (`h-10` is default for form-input in `@tailwindcss/forms`).
-    *   Adjusted default gap (`gap-1.5`) and label size (`text-sm`) slightly for potentially better default appearance.
-    *   Acknowledged potential redundancy of `compact` prop vs `sizeVariant`.
-6.  Accessibility & Structure:
-    *   Ensured `id` is passed down or generated using `React.useId()` and correctly applied to both the `label` (`htmlFor`) and `input` (`id`) for proper accessibility.
-    *   Used `cn` utility consistently for merging classes.
-7.  Removed Redundancy: Removed `transition-form` and `duration-form` as base input transitions are often handled globally or aren't as necessary as button transitions. If needed, standard `transition-colors duration-100` could be added.
-*/

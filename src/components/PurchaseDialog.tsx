@@ -9,6 +9,7 @@ import {
 import { Fragment, useState, useMemo } from "react";
 import { useAccount, useBalance, useChainId } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { BaseError } from "viem";
 import { FormInput } from "./FormInput";
 import { Button } from "./Button";
 import { OrderSummary } from "./OrderSummary";
@@ -120,15 +121,17 @@ export const PurchaseDialog = ({
         <div className="fixed inset-0 flex items-center justify-center p-3 md:p-4">
           <TransitionChild as={Fragment}>
             <DialogPanel className="w-full max-w-sm md:max-w-md transform overflow-hidden rounded-none bg-background border border-border p-4 md:p-6 transition-all duration-300 ease-out data-[closed]:opacity-0 data-[closed]:scale-95">
-              <div className="flex justify-between items-center mb-4">
-                <DialogTitle
-                  as="h3"
-                  className="text-lg font-mono font-bold text-accentGreen"
-                >
-                  Purchase {tokenSymbol}
-                </DialogTitle>
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-grow">
+                  <DialogTitle
+                    as="h3"
+                    className="text-lg font-mono font-bold text-accentGreen"
+                  >
+                    Purchase {tokenSymbol}
+                  </DialogTitle>
+                </div>
                 <CloseButton
-                  className="text-muted hover:text-foreground focus:outline-none"
+                  className="text-muted hover:text-foreground focus:outline-none ml-2 flex-shrink-0"
                   aria-label="Close"
                 >
                   <svg
@@ -151,20 +154,24 @@ export const PurchaseDialog = ({
                 <p className="text-xs text-muted w-full">{tokenName}</p>
 
                 <div className="w-full space-y-3">
-                  <div className="bg-muted/10 p-2 rounded-none border border-border">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted">
-                        Your USDC Balance:
-                      </span>
-                      <span className="text-xs font-mono font-medium text-foreground">
-                        ${formattedUsdcBalance}
-                      </span>
-                    </div>
-                  </div>
-
                   <div className="relative">
+                    <div className="flex justify-between items-center mb-0.5">
+                      <label
+                        htmlFor="amount-input"
+                        className="block text-xs font-medium text-muted"
+                      >
+                        Purchase Amount (USDC)
+                      </label>
+                      {isConnected && (
+                        <div className="text-xs text-muted">
+                          <span>Balance: </span>
+                          <span className="font-mono font-medium text-foreground">
+                            ${formattedUsdcBalance}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     <FormInput
-                      label="Purchase Amount (USDC)"
                       id="amount-input"
                       type="number"
                       value={amount}
@@ -204,14 +211,13 @@ export const PurchaseDialog = ({
                           d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
                         />
                       </svg>
-                      <span className="font-mono">Shipping Info</span>
+                      <p className="text-muted">
+                        Est. delivery:{" "}
+                        <span className="font-medium text-foreground font-mono">
+                          {ESTIMATED_DELIVERY}
+                        </span>
+                      </p>
                     </div>
-                    <p className="text-muted pl-5">
-                      Est. delivery:{" "}
-                      <span className="font-medium text-foreground font-mono">
-                        {ESTIMATED_DELIVERY}
-                      </span>
-                    </p>
                   </div>
 
                   <Button
@@ -244,8 +250,14 @@ export const PurchaseDialog = ({
                   </Button>
 
                   {swapState.error && (
-                    <div className="bg-destructive/10 text-destructive p-2 rounded-none text-xs border border-destructive">
-                      Error: {swapState.error.message}
+                    <div className="bg-destructive/10 text-destructive p-2 rounded-none text-xs border border-destructive space-y-1 max-h-32 overflow-y-auto">
+                      <p className="font-medium">Transaction Failed</p>
+                      <p className="font-mono break-words">
+                        Reason:{" "}
+                        {swapState.error instanceof BaseError
+                          ? swapState.error.shortMessage
+                          : swapState.error.message}
+                      </p>
                     </div>
                   )}
 
@@ -264,9 +276,8 @@ export const PurchaseDialog = ({
                   )}
 
                   <p className="text-xs text-muted text-center mt-2">
-                    By completing this purchase, you agree to our Terms of
-                    Service and acknowledge that physical redemption is subject
-                    to verification and applicable regulations.
+                    You agree to our Terms of Service and acknowledge that
+                    shipments are subject to your local regulations.
                   </p>
                 </div>
               </div>
