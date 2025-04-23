@@ -16,13 +16,10 @@ export default defineConfig({
       'buffer': 'buffer/',
     },
   },
-  define: {
-    'globalThis.Buffer': Buffer,
-  },
   build: {
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (id.includes('node_modules')) {
             if (id.includes('wagmi') || id.includes('@wagmi') || id.includes('@rainbow-me/rainbowkit')) {
               return 'vendor-web3';
