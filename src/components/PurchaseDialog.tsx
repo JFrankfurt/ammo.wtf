@@ -6,13 +6,16 @@ import {
   TransitionChild,
   CloseButton,
 } from "@headlessui/react";
-import { Fragment, useEffect, useState, useMemo } from "react";
-import { USDC_ADDRESS } from "../addresses";
+import { Fragment, useState, useMemo } from "react";
 import { useAccount, useBalance, useChainId } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { FormInput } from "./FormInput";
-import { useUniswapSwap } from "../hooks";
 import { Button } from "./Button";
+import { OrderSummary } from "./OrderSummary";
+import { usePurchaseCalculations } from "../hooks/usePurchaseCalculations";
+import { usePurchaseSwap } from "../hooks/usePurchaseSwap";
+import { USDC_ADDRESS } from "../addresses";
+import { useDebounceValue } from "usehooks-ts";
 
 interface PurchaseDialogProps {
   isOpen: boolean;
@@ -24,6 +27,10 @@ interface PurchaseDialogProps {
   onError: (error: Error) => void;
 }
 
+const SLIPPAGE_PERCENTAGE = 5;
+const SHIPPING_FEE_PERCENTAGE = 10;
+const ESTIMATED_DELIVERY = "2-4 weeks";
+
 export const PurchaseDialog = ({
   isOpen,
   onClose,
@@ -33,114 +40,72 @@ export const PurchaseDialog = ({
   onSuccess,
   onError,
 }: PurchaseDialogProps) => {
-  // Get the current network
-  const { chain, address, isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
+  const chainId = useChainId();
   const { openConnectModal } = useConnectModal();
-  const chainId = chain?.id || 1; // Default to Ethereum Mainnet
+  const [amount, setAmount] = useState("");
+  const [debouncedAmount] = useDebounceValue(amount, 500);
 
-  // Get USDC balance
+  const usdcTokenAddress = useMemo(
+    () => USDC_ADDRESS[chainId] || "",
+    [chainId]
+  );
   const { data: usdcBalance } = useBalance({
     address,
-    token: USDC_ADDRESS[chainId],
+    token: usdcTokenAddress,
+    chainId: chainId,
+    query: {
+      enabled: isConnected && !!usdcTokenAddress,
+    },
   });
 
-  // Format USDC balance for display
   const formattedUsdcBalance = useMemo(() => {
     if (!usdcBalance) return "0.00";
     return parseFloat(usdcBalance.formatted).toFixed(2);
   }, [usdcBalance]);
 
-  // Use our consolidated Uniswap hook
-  const { state, getQuote, swap } = useUniswapSwap(chainId ?? 1);
+  const { subtotal, shippingFee, totalCost, parsedAmount } =
+    usePurchaseCalculations({
+      amount: debouncedAmount,
+      shippingFeePercentage: SHIPPING_FEE_PERCENTAGE,
+    });
 
-  // Form state - only need USDC amount
-  const [amount, setAmount] = useState("");
+  const isSwapEnabled =
+    isConnected && !!usdcTokenAddress && !!tokenAddress && parsedAmount > 0;
 
-  // Hardcoded slippage to 5% (hidden from user)
-  const SLIPPAGE_PERCENTAGE = 5;
+  const { swapState, executeSwap } = usePurchaseSwap({
+    amountUSDC: debouncedAmount,
+    totalCostUSDC: totalCost,
+    parsedAmountUSDC: parsedAmount,
+    tokenOutAddress: tokenAddress,
+    slippagePercentage: SLIPPAGE_PERCENTAGE,
+    chainId: chainId,
+    onSuccess: onSuccess,
+    onError: onError,
+    enabled: isSwapEnabled,
+  });
 
-  // Shipping and handling fee (10% of transaction amount)
-  const SHIPPING_FEE_PERCENTAGE = 10;
-
-  // Get USDC address for the current chain
-  const usdcAddress = USDC_ADDRESS[chainId] || "";
-
-  // Calculate shipping fee
-  const shippingFee =
-    amount && parseFloat(amount) > 0
-      ? ((parseFloat(amount) * SHIPPING_FEE_PERCENTAGE) / 100).toFixed(2)
-      : "0.00";
-
-  // Calculate total cost
-  const totalCost =
-    amount && parseFloat(amount) > 0
-      ? (parseFloat(amount) + parseFloat(shippingFee)).toFixed(2)
-      : "0.00";
-
-  // Handle getting a quote when amount changes
-  useEffect(() => {
-    const fetchQuote = async () => {
-      if (!amount || parseFloat(amount) <= 0) return;
-
-      try {
-        await getQuote({
-          tokenIn: usdcAddress,
-          tokenOut: tokenAddress,
-          amount,
-          slippagePercentage: SLIPPAGE_PERCENTAGE,
-        });
-      } catch (error) {
-        console.error("Error getting quote:", error);
-        if (onError && error instanceof Error) onError(error);
-      }
-    };
-
-    fetchQuote();
-  }, [amount, getQuote, tokenAddress, usdcAddress, onError]);
-
-  // Handle transaction success
-  useEffect(() => {
-    if (state.txHash && onSuccess) {
-      onSuccess(state.txHash);
-    }
-  }, [state.txHash, onSuccess]);
-
-  // Handle transaction error
-  useEffect(() => {
-    if (state.error && onError) {
-      onError(state.error);
-    }
-  }, [state.error, onError]);
-
-  // Handle executing a swap
-  const handleSwap = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid USDC amount");
-      return;
-    }
-
-    try {
-      await swap({
-        tokenIn: usdcAddress,
-        tokenOut: tokenAddress,
-        amount: totalCost, // Use total cost including shipping fee
-        slippagePercentage: SLIPPAGE_PERCENTAGE,
-      });
-    } catch (error) {
-      console.error("Error executing swap:", error);
-      if (onError && error instanceof Error) onError(error);
-    }
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAmount(e.target.value);
   };
 
-  // Handle button click based on connection status
   const handleButtonClick = () => {
     if (!isConnected) {
       openConnectModal?.();
+    } else if (isSwapEnabled) {
+      executeSwap();
     } else {
-      handleSwap();
+      console.warn("Swap button clicked but conditions not met.");
     }
   };
-  const estimatedDelivery = "2-4 weeks";
+
+  const isButtonDisabled =
+    isConnected && (!isSwapEnabled || swapState.loading || !swapState.quote);
+
+  const explorerUrl = useMemo(() => {
+    const baseUrl = chainId === 8453 ? "basescan.org" : "sepolia.etherscan.io";
+    return swapState.txHash ? `https://${baseUrl}/tx/${swapState.txHash}` : "#";
+  }, [chainId, swapState.txHash]);
 
   return (
     <Transition show={isOpen} as={Fragment}>
@@ -203,7 +168,7 @@ export const PurchaseDialog = ({
                       id="amount-input"
                       type="number"
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
+                      onChange={handleAmountChange}
                       placeholder="0.00"
                       min="0"
                       step="0.01"
@@ -214,51 +179,15 @@ export const PurchaseDialog = ({
                     </span>
                   </div>
 
-                  <div className="border border-border rounded-none overflow-hidden">
-                    <div className="bg-muted/10 px-3 py-1.5 border-b border-border">
-                      <h3 className="font-medium text-xs font-mono text-foreground">
-                        Order Summary
-                      </h3>
-                    </div>
-
-                    <div className="p-2.5 space-y-1.5 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted">Subtotal</span>
-                        <span className="font-mono font-medium text-foreground">
-                          {amount || "0.00"} USDC
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between">
-                        <span className="text-muted">
-                          Shipping ({SHIPPING_FEE_PERCENTAGE}%)
-                        </span>
-                        <span className="font-mono font-medium text-foreground">
-                          {shippingFee} USDC
-                        </span>
-                      </div>
-
-                      <div className="border-t border-border my-1 pt-1"></div>
-
-                      <div className="flex justify-between">
-                        <span className="font-medium font-mono text-foreground">
-                          Total
-                        </span>
-                        <span className="font-bold font-mono text-foreground">
-                          {totalCost} USDC
-                        </span>
-                      </div>
-
-                      {state.quote && (
-                        <div className="flex justify-between pt-1 border-t border-border">
-                          <span className="text-muted">You receive (est.)</span>
-                          <span className="font-mono font-medium text-accentGreen">
-                            {state.quote.outputAmount} {tokenSymbol}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <OrderSummary
+                    subtotal={subtotal}
+                    shippingFee={shippingFee}
+                    totalCost={totalCost}
+                    shippingFeePercentage={SHIPPING_FEE_PERCENTAGE}
+                    estimatedOutputAmount={swapState.quote?.outputAmount}
+                    outputTokenSymbol={tokenSymbol}
+                    currencySymbol="USDC"
+                  />
 
                   <div className="bg-muted/10 p-2 rounded-none text-xs border border-border">
                     <div className="flex items-center gap-1 text-muted font-medium mb-0.5">
@@ -280,7 +209,7 @@ export const PurchaseDialog = ({
                     <p className="text-muted pl-5">
                       Est. delivery:{" "}
                       <span className="font-medium text-foreground font-mono">
-                        {estimatedDelivery}
+                        {ESTIMATED_DELIVERY}
                       </span>
                     </p>
                   </div>
@@ -289,17 +218,11 @@ export const PurchaseDialog = ({
                     variant="primary"
                     fullWidth
                     onClick={handleButtonClick}
-                    disabled={
-                      isConnected &&
-                      (state.loading ||
-                        !amount ||
-                        !state.quote ||
-                        parseFloat(amount) <= 0)
-                    }
+                    disabled={isButtonDisabled}
                   >
                     {!isConnected ? (
                       "Connect Wallet"
-                    ) : state.loading ? (
+                    ) : swapState.loading ? (
                       <div className="flex items-center justify-center">
                         <svg
                           className="animate-spin h-4 w-4 mr-2 text-accentGreen"
@@ -320,21 +243,17 @@ export const PurchaseDialog = ({
                     )}
                   </Button>
 
-                  {state.error && (
+                  {swapState.error && (
                     <div className="bg-destructive/10 text-destructive p-2 rounded-none text-xs border border-destructive">
-                      {state.error.message}
+                      Error: {swapState.error.message}
                     </div>
                   )}
 
-                  {state.txHash && (
+                  {swapState.txHash && (
                     <div className="bg-accentGreen/10 text-accentGreen p-2 rounded-none text-xs border border-accentGreen">
                       <p className="font-medium font-mono">Order Confirmed!</p>
                       <a
-                        href={`https://${
-                          chain?.name?.toLowerCase().includes("base")
-                            ? "basescan.org"
-                            : "sepolia.etherscan.io"
-                        }/tx/${state.txHash}`}
+                        href={explorerUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-foreground underline font-mono"
