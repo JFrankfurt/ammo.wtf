@@ -1,16 +1,66 @@
 import { Actions } from "@uniswap/v4-sdk";
 import { useCallback, useState } from "react";
 import {
-  encodeFunctionData,
+  encodeAbiParameters,
   encodePacked,
   formatUnits,
+  parseAbiParameters,
   parseUnits,
 } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import AMMO_TOKEN_ERC20_ABI from "../abi/ammoTokenERC20";
 import { UNIVERSAL_ROUTER_ABI } from "../abi/universalRouter";
-import { SWAP_ROUTER_02_ADDRESS, USDC_ADDRESS } from "../addresses";
+import { UNIVERSAL_ROUTER_ADDRESSES } from "../addresses";
 import { logger } from "../utils/logger";
+
+// Define the PoolKey structure type matching Solidity for clarity
+type PoolKey = {
+  currency0: `0x${string}`;
+  currency1: `0x${string}`;
+  fee: number; // uint24
+  tickSpacing: number; // int24
+  hooks: `0x${string}`;
+};
+
+// Define the ExactInputSingleParams structure type matching Solidity
+type ExactInputSingleParams = {
+  poolKey: PoolKey;
+  zeroForOne: boolean;
+  amountIn: bigint;
+  amountOutMinimum: bigint;
+  // Assuming sqrtPriceLimitX96 and hookData are needed based on interface
+  sqrtPriceLimitX96: bigint;
+  hookData: `0x${string}`;
+};
+
+// Define the structure for the parameters passed to encodeAbiParameters for the swap param
+const exactInputSingleParamsAbi = [
+  {
+    name: "params",
+    type: "tuple",
+    components: [
+      {
+        name: "poolKey",
+        type: "tuple",
+        components: [
+          { name: "currency0", type: "address" },
+          { name: "currency1", type: "address" },
+          { name: "fee", type: "uint24" },
+          { name: "tickSpacing", type: "int24" },
+          { name: "hooks", type: "address" },
+        ],
+      },
+      { name: "zeroForOne", type: "bool" },
+      { name: "amountIn", type: "uint128" }, // Use uint128 if appropriate, else uint256
+      { name: "amountOutMinimum", type: "uint128" }, // Use uint128 if appropriate, else uint256
+      { name: "sqrtPriceLimitX96", type: "uint160" },
+      { name: "hookData", type: "bytes" },
+    ],
+  },
+] as const; // Use 'as const' for better type inference
+
+// Define the structure for the final input combining actions and params array
+const executeV4SwapInputAbi = parseAbiParameters('bytes actions, bytes[] params');
 
 export interface SwapState {
   loading: boolean;
@@ -24,234 +74,175 @@ export interface SwapState {
 }
 
 export interface SwapParams {
-  tokenIn: string;
-  tokenOut: string;
-  amount: string;
-  slippagePercentage: number;
+  tokenIn: string; // This represents the token the user *has* (e.g., USDC)
+  tokenOut: string; // This represents the token the user *wants* (e.g., AMMO)
+  amount: string; // Amount of tokenIn
+  slippagePercentage: number; // Not currently used in quote/swap logic
 }
 
 export function useUniswapSwap(chainId: number) {
-  logger.debug('useUniswapSwap initialized', { chainId });
+  logger.debug('useUniswapSwap', 'useUniswapSwap initialized', { chainId });
   const [state, setState] = useState<SwapState>({
     loading: false,
     error: null,
     txHash: null,
     quote: null,
   });
-  logger.debug('Initial state set', { state });
+  logger.debug('useUniswapSwap', 'Initial state set', { state });
 
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
-  logger.debug('Wagmi hooks initialized', { address, hasPublicClient: !!publicClient, hasWalletClient: !!walletClient });
+  logger.debug('useUniswapSwap', 'Wagmi hooks initialized', { address, hasPublicClient: !!publicClient, hasWalletClient: !!walletClient });
 
-  // Store the current swap parameters for simulation
-  const [currentSwapConfig, setCurrentSwapConfig] = useState<{
+  // Store the prepared arguments for the execute call
+  const [currentSwapArgs, setCurrentSwapArgs] = useState<{
     commands: `0x${string}`;
     inputs: `0x${string}`[];
     deadline: bigint;
   } | null>(null);
-  logger.debug('Initial currentSwapConfig set to null');
+  logger.debug('useUniswapSwap', 'Initial currentSwapArgs set to null');
 
   const getQuote = useCallback(
     async ({
       tokenIn,
       tokenOut,
       amount,
-      slippagePercentage,
     }: SwapParams): Promise<void> => {
-      logger.debug('getQuote called', { tokenIn, tokenOut, amount, slippagePercentage, address });
+      logger.debug('useUniswapSwap', 'getQuote called', { tokenIn, tokenOut, amount, address });
       if (!address || !publicClient) {
           logger.warn('getQuote skipped: Missing address or publicClient', { address, hasPublicClient: !!publicClient });
           return;
       }
 
-      logger.debug('Setting loading state to true for quote');
+      logger.debug('useUniswapSwap', 'Setting loading state to true for quote');
       setState((prev) => ({ ...prev, loading: true, error: null, quote: null })); // Clear previous quote/error
 
       try {
-        const parsedAmount = parseUnits(amount, 6); // USDC has 6 decimals
-        logger.debug('Parsed amount for quote', { amount, parsedAmount: parsedAmount.toString() });
+        const decimalsIn = 6;
+        const parsedAmountIn = parseUnits(amount, decimalsIn);
+        logger.debug('useUniswapSwap', 'Parsed amount for quote', { amount, decimalsIn, parsedAmountIn: parsedAmountIn.toString() });
 
-        // Step 1: Encode the Universal Router command for V4 swap
-        const commands = encodePacked(["uint8"], [0x20]) as `0x${string}`;
-        logger.debug('Encoded commands', { commands });
+        // 1. Encode Commands
+        // 0x10 appears to be the correct command byte for V4 swaps on the target Universal Router (Base).
+        // This was confirmed by analyzing successful transaction: 0x91204755c237d4a2799aa7f215b670ed837d9535e5a6887b89d2ddd875772cbf
+        const commands = encodePacked(["uint8"], [0x10]);
+        logger.debug('useUniswapSwap', 'Encoded commands', { commands });
 
-        // Step 2: Create the actions bytes - in same order as Solidity example:
-        // SWAP_EXACT_IN_SINGLE (0), SETTLE_ALL (1), TAKE_ALL (2)
+        // 2. Encode V4 Router Actions
+        // These define the steps within the V4 swap itself
         const actions = encodePacked(
           ["uint8", "uint8", "uint8"],
           [Actions.SWAP_EXACT_IN_SINGLE, Actions.SETTLE_ALL, Actions.TAKE_ALL]
         );
-        logger.debug('Encoded actions', { actions });
+        logger.debug('useUniswapSwap', 'Encoded actions', { actions });
 
-        // Step 3: Prepare parameters for each action
+        // 3. Determine PoolKey and swap direction
+        const currencyA = tokenIn as `0x${string}`;
+        const currencyB = tokenOut as `0x${string}`;
+        const [currency0, currency1] =
+          BigInt(currencyA) < BigInt(currencyB)
+            ? [currencyA, currencyB]
+            : [currencyB, currencyA];
+        const zeroForOne = currencyA === currency0; // True if swapping token0 (lower address) for token1 (higher address)
+        logger.debug('useUniswapSwap', 'Determined pool order', { currency0, currency1, zeroForOne });
 
-        // The poolKey parameter needs to include currencies, fee, and additional data
-        // We'll create a simplified version here as we don't have a full PoolKey object
-        const poolKey = {
-          currency0: USDC_ADDRESS[chainId],
-          currency1: tokenIn,
-          fee: 3000,
-          tickSpacing: 60, // Standard spacing for 0.3% fee tier
-          hooks: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+        // TODO: Fetch fee/tickSpacing/hooks dynamically if possible, or use reliable constants
+        const fee = 3000;
+        const tickSpacing = 60;
+        const hooks = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+        const poolKey: PoolKey = { currency0, currency1, fee, tickSpacing, hooks };
+        logger.debug('useUniswapSwap', 'Constructed poolKey', { poolKey });
+
+        // 4. Prepare and encode individual parameters for each action
+        //    These will form the `params` array in the final encoding step
+
+        // Param 1: SWAP_EXACT_IN_SINGLE
+        const swapParamsData: ExactInputSingleParams = {
+          poolKey,
+          zeroForOne,
+          amountIn: parsedAmountIn,
+          amountOutMinimum: BigInt(1), // TODO: Calculate based on slippage
+          sqrtPriceLimitX96: BigInt(0), // Set to 0 for no limit unless required
+          hookData: "0x0",
         };
-        logger.debug('Constructed poolKey', { poolKey });
+        const encodedSwapParam = encodeAbiParameters(exactInputSingleParamsAbi, [swapParamsData]);
+        logger.debug('useUniswapSwap', 'Encoded swapParam', { swapParamsData, encodedSwapParam });
 
-        // zeroForOne is true if we're swapping token0 for token1
-        // Assuming USDC is token0 in the pool
-        const zeroForOne = true;
-        logger.debug('Set zeroForOne', { zeroForOne });
+        // Param 2: SETTLE_ALL
+        // Use the actual input currency and amount
+        const settleCurrency = zeroForOne ? poolKey.currency0 : poolKey.currency1; // Should match tokenIn
+        const encodedSettleParam = encodeAbiParameters(
+          parseAbiParameters("address currency, uint256 amount"),
+          [settleCurrency, parsedAmountIn]
+        );
+        logger.debug('useUniswapSwap', 'Encoded settleParam', { settleCurrency, parsedAmountIn, encodedSettleParam });
 
-        // Parameter for SWAP_EXACT_IN_SINGLE - using abi.encode equivalent
-        // This is similar to the IV4Router.ExactInputSingleParams struct in Solidity
-        const swapParamArgs = {
-            poolKey,
-            zeroForOne,
-            amountIn: parsedAmount,
-            amountOutMinimum: BigInt(0),
-            sqrtPriceLimitX96: BigInt(0),
-            hookData:
-                "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
-        };
-        const swapParam = encodeFunctionData({
-          abi: [
-            {
-              name: "exactInputSingle",
-              type: "function",
-              inputs: [
-                {
-                  name: "params",
-                  type: "tuple",
-                  components: [
-                    {
-                      name: "poolKey",
-                      type: "tuple",
-                      components: [
-                        { name: "currency0", type: "address" },
-                        { name: "currency1", type: "address" },
-                        { name: "fee", type: "uint24" },
-                        { name: "tickSpacing", type: "int24" },
-                        { name: "hooks", type: "address" },
-                      ],
-                    },
-                    { name: "zeroForOne", type: "bool" },
-                    { name: "amountIn", type: "uint256" },
-                    { name: "amountOutMinimum", type: "uint256" },
-                    { name: "sqrtPriceLimitX96", type: "uint160" },
-                    { name: "hookData", type: "bytes" },
-                  ],
-                },
-              ],
-            },
-          ] as const,
-          functionName: "exactInputSingle",
-          args: [swapParamArgs],
-        });
-        logger.debug('Encoded swapParam', { swapParamArgs, swapParam });
+        // Param 3: TAKE_ALL
+        // Use the output currency and the minimum amount expected
+        const takeCurrency = zeroForOne ? poolKey.currency1 : poolKey.currency0; // Should match tokenOut
+        const amountOutMinimum = BigInt(0); // TODO: Calculate based on slippage
+        const encodedTakeParam = encodeAbiParameters(
+          parseAbiParameters("address currency, uint256 amountMinimum"),
+          [takeCurrency, amountOutMinimum]
+        );
+        logger.debug('useUniswapSwap', 'Encoded takeParam', { takeCurrency, amountOutMinimum, encodedTakeParam });
 
-        // Parameter for SETTLE_ALL - encodes (currency0, amountIn)
-        const settleParamArgs = [poolKey.currency0, parsedAmount];
-        const settleParam = encodeFunctionData({
-          abi: [
-            {
-              name: "settleAll",
-              type: "function",
-              inputs: [
-                { name: "currency", type: "address" },
-                { name: "amount", type: "uint256" },
-              ],
-            },
-          ],
-          functionName: "settleAll",
-          args: settleParamArgs,
-        });
-        logger.debug('Encoded settleParam', { settleParamArgs, settleParam });
+        // --- Construct `inputs` argument for router.execute ---
+        // Combine `actions` and the array of encoded params (`params`)
+        // into a single bytes string, which becomes inputs[0].
+        const paramsArray = [encodedSwapParam, encodedSettleParam, encodedTakeParam];
+        const executeV4SwapInputEncoded = encodeAbiParameters(
+          executeV4SwapInputAbi, // Uses abi definition: (bytes actions, bytes[] params)
+          [actions, paramsArray]
+        );
+        logger.debug('useUniswapSwap', 'Encoded final V4 Swap input (actions + params)', { actions, paramsArray, executeV4SwapInputEncoded });
 
-        // Parameter for TAKE_ALL - encodes (currency1, amountOutMinimum)
-        const takeParamArgs = [poolKey.currency1, BigInt(0)];
-        const takeParam = encodeFunctionData({
-          abi: [
-            {
-              name: "takeAll",
-              type: "function",
-              inputs: [
-                { name: "currency", type: "address" },
-                { name: "amountMinimum", type: "uint256" },
-              ],
-            },
-          ],
-          functionName: "takeAll",
-          args: takeParamArgs,
-        });
-        logger.debug('Encoded takeParam', { takeParamArgs, takeParam });
+        // The 'inputs' array passed to router.execute contains just this one combined element
+        const inputs: `0x${string}`[] = [executeV4SwapInputEncoded];
+        logger.debug('useUniswapSwap', 'Constructed execute inputs array for router', { inputs });
 
-        // Create the params array - MUST be size 3 matching the actions
-        const params = [swapParam, settleParam, takeParam];
-        logger.debug('Created params array', { params });
 
-        // Combine actions and params into inputs
-        // This is equivalent to Solidity's abi.encode(actions, params)
-        const executeArgs = [actions, params];
-        const inputs = [
-          encodeFunctionData({
-            abi: [
-              {
-                name: "execute",
-                type: "function",
-                inputs: [
-                  { name: "actions", type: "bytes" },
-                  { name: "params", type: "bytes[]" },
-                ],
-              },
-            ],
-            functionName: "execute",
-            args: executeArgs,
-          }),
-        ];
-        logger.debug('Encoded execute inputs', { executeArgs, inputs });
+        // 5. Prepare Deadline
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1800); // 30 minutes
+        logger.debug('useUniswapSwap', 'Calculated deadline', { deadline: deadline.toString() });
 
-        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1800);
-        logger.debug('Calculated deadline', { deadline: deadline.toString() });
+        // Store the correctly prepared arguments
+        const argsToStore = { commands, inputs, deadline };
+        setCurrentSwapArgs(argsToStore);
+        logger.debug('useUniswapSwap', 'Stored currentSwapArgs for execution', { currentSwapArgs: argsToStore });
 
-        // Store the config for later use in the contract write
-        const configToStore = { commands, inputs, deadline };
-        setCurrentSwapConfig(configToStore);
-        logger.debug('Stored currentSwapConfig for execution', { currentSwapConfig: configToStore });
+        // --- Simulation & Quote Generation ---
+        const feeAmount = (parseFloat(amount) * (fee / 1_000_000)).toFixed(decimalsIn); // Rough estimate
+        const priceImpact = "< 1%"; // Placeholder
+        logger.debug('useUniswapSwap', 'Calculated cosmetic fee and price impact', { feeAmount, priceImpact });
 
-        // Calculate fee (0.3% of input amount)
-        const feeAmount = (parseFloat(amount) * 0.003).toFixed(6);
-        const priceImpact = "< 1%";
-        logger.debug('Calculated cosmetic fee and price impact', { feeAmount, priceImpact });
-
-        // Simulate the contract call using publicClient directly for the quote
-        logger.debug('Simulating swap contract call for quote...', { address: SWAP_ROUTER_02_ADDRESS[chainId], commands, inputs, deadline });
+        logger.debug('useUniswapSwap', 'Simulating swap contract call for quote...', { address: UNIVERSAL_ROUTER_ADDRESSES[chainId], functionName: "execute", args: [commands, inputs, deadline] });
+        // NOTE: QUOTE REMAINS NON-FUNCTIONAL until simulation result parsing is implemented
         const simulationResult = await publicClient.simulateContract({
-          address: SWAP_ROUTER_02_ADDRESS[chainId],
+          address: UNIVERSAL_ROUTER_ADDRESSES[chainId],
           abi: UNIVERSAL_ROUTER_ABI,
           functionName: "execute",
-          args: [commands, inputs, deadline],
+          args: [commands, inputs, deadline], // Pass correctly structured args
           account: address,
         });
-        logger.debug('Swap simulation successful', { simulationResult });
+        logger.debug('useUniswapSwap', 'Swap simulation successful', { simulationResult });
 
-        // For simulation purposes, we'll use a placeholder value
-        // In a real implementation, you would extract the actual output amount from the simulation result
-        // TODO: Extract actual output amount from simulationResult if possible
-        const simulatedOutputAmount = BigInt(0); // Placeholder
-        logger.debug('Using placeholder simulatedOutputAmount', { simulatedOutputAmount: simulatedOutputAmount.toString() });
+        const simulatedOutputAmount = BigInt(0); // Placeholder - Needs implementation
+        const outputDecimals = 18; // TODO: Make dynamic
+        logger.warn(
+          'useUniswapSwap',
+          'Using placeholder simulatedOutputAmount. Quote is inaccurate.',
+          { simulatedOutputAmount: simulatedOutputAmount.toString() }
+        );
 
         const newQuote = {
-            outputAmount: formatUnits(simulatedOutputAmount, 18), // Assuming output token has 18 decimals
+            outputAmount: formatUnits(simulatedOutputAmount, outputDecimals),
             fee: feeAmount,
             priceImpact,
         };
-        logger.debug('Setting final quote state', { newQuote });
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          quote: newQuote,
-        }));
+        logger.debug('useUniswapSwap', 'Setting final quote state', { newQuote });
+        setState((prev) => ({ ...prev, loading: false, quote: newQuote }));
       } catch (error) {
         logger.error("Error getting quote:", error);
         setState((prev) => ({ ...prev, loading: false, error: error instanceof Error ? error : new Error(String(error)), quote: null }));
@@ -262,42 +253,42 @@ export function useUniswapSwap(chainId: number) {
 
   const checkAndApproveToken = useCallback(
     async (tokenAddress: string, amount: string): Promise<boolean> => {
-      logger.debug('checkAndApproveToken called', { tokenAddress, amount, address });
+      logger.debug('useUniswapSwap', 'checkAndApproveToken called', { tokenAddress, amount, address });
       if (!address || !walletClient || !publicClient) {
           logger.warn('checkAndApproveToken skipped: Missing address, walletClient or publicClient');
           return false;
       }
 
       try {
-        const parsedAmount = parseUnits(amount, 6); // Assuming input token (USDC) always has 6 decimals
-        logger.debug('Checking allowance', { tokenAddress, owner: address, spender: SWAP_ROUTER_02_ADDRESS[chainId] });
-        // Check current allowance
+        const decimalsIn = 6; // TODO: Make dynamic
+        const parsedAmount = parseUnits(amount, decimalsIn);
+        const spender = UNIVERSAL_ROUTER_ADDRESSES[chainId];
+        logger.debug('useUniswapSwap', 'Checking allowance', { tokenAddress, owner: address, spender });
         const allowance = (await publicClient.readContract({
           address: tokenAddress as `0x${string}`,
           abi: AMMO_TOKEN_ERC20_ABI,
           functionName: "allowance",
-          args: [address, SWAP_ROUTER_02_ADDRESS[chainId]],
+          args: [address, spender],
         })) as bigint;
-        logger.debug('Current allowance', { allowance: allowance.toString(), requiredAmount: parsedAmount.toString() });
+        logger.debug('useUniswapSwap', 'Current allowance', { allowance: allowance.toString(), requiredAmount: parsedAmount.toString() });
 
-        // If allowance is insufficient, approve
-        if (allowance < parsedAmount) { // Compare with parsedAmount
-          logger.debug('Allowance insufficient, attempting approval');
+        if (allowance < parsedAmount) {
+          logger.debug('useUniswapSwap', 'Allowance insufficient, attempting approval');
           const { request } = await publicClient.simulateContract({
             address: tokenAddress as `0x${string}`,
             abi: AMMO_TOKEN_ERC20_ABI,
             functionName: "approve",
-            args: [SWAP_ROUTER_02_ADDRESS[chainId], parsedAmount], // Approve parsedAmount
+            args: [spender, parsedAmount],
             account: address,
           });
-          logger.debug('Approval simulation successful, sending transaction', { request });
+          logger.debug('useUniswapSwap', 'Approval simulation successful, sending transaction', { request });
           const approveTxHash = await walletClient.writeContract(request);
-          logger.debug('Approval transaction sent', { approveTxHash });
+          logger.debug('useUniswapSwap', 'Approval transaction sent', { approveTxHash });
           // Optional: Wait for transaction confirmation
           // await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
-          // logger.debug('Approval transaction confirmed', { approveTxHash });
+          // logger.debug('useUniswapSwap', 'Approval transaction confirmed', { approveTxHash });
         } else {
-            logger.debug('Allowance sufficient, skipping approval');
+            logger.debug('useUniswapSwap', 'Allowance sufficient, skipping approval');
         }
         return true;
       } catch (error) {
@@ -309,16 +300,16 @@ export function useUniswapSwap(chainId: number) {
   );
 
   const swap = useCallback(
-    async ({ tokenIn, tokenOut, amount, slippagePercentage }: SwapParams) => {
-      logger.debug('swap called', { tokenIn, tokenOut, amount, slippagePercentage, address });
-      if (!address || !publicClient || !walletClient || !currentSwapConfig) {
-        const errorMsg = "Missing required parameters or wallet not connected or quote not fetched";
-        logger.error('Swap precondition failed', { 
-            hasAddress: !!address, 
-            hasPublicClient: !!publicClient, 
-            hasWalletClient: !!walletClient, 
-            hasCurrentSwapConfig: !!currentSwapConfig, 
-            errorMsg 
+    async ({ tokenIn, amount }: SwapParams) => {
+      logger.debug('useUniswapSwap', 'swap called', { tokenIn, amount, address });
+      if (!address || !publicClient || !walletClient || !currentSwapArgs) {
+        const errorMsg = "Missing required parameters, wallet not connected, or quote not fetched";
+        logger.error('Swap precondition failed', {
+            hasAddress: !!address,
+            hasPublicClient: !!publicClient,
+            hasWalletClient: !!walletClient,
+            hasCurrentSwapArgs: !!currentSwapArgs,
+            errorMsg
         });
         setState((prev) => ({
           ...prev,
@@ -327,55 +318,39 @@ export function useUniswapSwap(chainId: number) {
         return;
       }
 
-      logger.debug('Setting loading state to true for swap');
+      logger.debug('useUniswapSwap', 'Setting loading state to true for swap');
       setState((prev) => ({ ...prev, loading: true, error: null }));
 
       try {
-        // Check and approve token if needed
-        logger.debug('Checking/Approving token before swap', { tokenIn, amount });
         const approved = await checkAndApproveToken(tokenIn, amount);
         if (!approved) {
           const approveError = new Error("Token approval failed or was rejected.");
           logger.error('Swap failed: Token approval failed', approveError);
           setState((prev) => ({ ...prev, loading: false, error: approveError }));
-          throw approveError; // Rethrow after setting state
+          throw approveError;
         }
-        logger.debug('Token approval successful or not needed');
+        logger.debug('useUniswapSwap', 'Token approval successful or not needed');
 
-        // Use the stored config from getQuote
-        // Redundant check, already done above, but good for clarity
-        if (!currentSwapConfig) {
-          const configError = new Error("Swap configuration not found, cannot execute swap.");
-          logger.error('Swap failed: currentSwapConfig is null unexpectedly', configError);
-           setState((prev) => ({ ...prev, loading: false, error: configError }));
-          throw configError;
-        }
+        const { commands, inputs, deadline } = currentSwapArgs; // These args are now correctly structured from getQuote
+        logger.debug('useUniswapSwap', 'Executing swap transaction with stored args', { address: UNIVERSAL_ROUTER_ADDRESSES[chainId], commands, inputs, deadline });
 
-        const { commands, inputs, deadline } = currentSwapConfig;
-        logger.debug('Executing swap transaction with stored config', { address: SWAP_ROUTER_02_ADDRESS[chainId], commands, inputs, deadline });
-
-        // Execute the swap using the wallet client
         const txHash = await walletClient.writeContract({
-          address: SWAP_ROUTER_02_ADDRESS[chainId],
+          address: UNIVERSAL_ROUTER_ADDRESSES[chainId],
           abi: UNIVERSAL_ROUTER_ABI,
           functionName: "execute",
-          args: [commands, inputs, deadline],
-          account: address // Ensure account is passed if required by walletClient setup
+          args: [commands, inputs, deadline], // Args structure is now correct
+          account: address
         });
-        logger.debug('Swap transaction sent successfully', { txHash });
+        logger.debug('useUniswapSwap', 'Swap transaction sent successfully', { txHash });
 
         setState((prev) => ({ ...prev, loading: false, error: null, txHash }));
-        // Optional: Wait for transaction confirmation here if needed before returning
-        // logger.debug('Waiting for swap transaction confirmation...', { txHash });
-        // await publicClient.waitForTransactionReceipt({ hash: txHash });
-        // logger.debug('Swap transaction confirmed', { txHash });
 
         return txHash;
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         logger.error("Error executing swap:", err);
         setState((prev) => ({ ...prev, loading: false, error: err }));
-        throw err; // Re-throw the error for the caller
+        throw err;
       }
     },
     [
@@ -384,11 +359,11 @@ export function useUniswapSwap(chainId: number) {
       publicClient,
       walletClient,
       checkAndApproveToken,
-      currentSwapConfig,
+      currentSwapArgs,
     ]
   );
 
-  logger.debug('useUniswapSwap hook setup complete. Returning state and functions.');
+  logger.debug('useUniswapSwap', 'useUniswapSwap hook setup complete. Returning state and functions.');
   return {
     state,
     getQuote,

@@ -91,11 +91,9 @@ const USDC_ADDRESS: Record<number, `0x${string}`> = {
 };
 
 // Define the Universal Router address
-const SWAP_ROUTER_02_ADDRESS: Record<number, `0x${string}`> = {
-  [base.id]: CHAIN_TO_ADDRESSES_MAP[base.id]
-    .swapRouter02Address as `0x${string}`,
-  [sepolia.id]: CHAIN_TO_ADDRESSES_MAP[sepolia.id]
-    .swapRouter02Address as `0x${string}`,
+const UNIVERSAL_ROUTER_ADDRESSES: Record<number, `0x${string}`> = {
+  [base.id]: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD' as `0x${string}`,
+  [sepolia.id]: '0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b' as `0x${string}`,
 };
 
 // Define the Pool Manager address
@@ -117,6 +115,6 @@ export {
   POOL_MANAGER_ADDRESS,
   TEST_556_TOKEN_ADDRESS,
   TOKEN_ADDRESSES,
-  SWAP_ROUTER_02_ADDRESS,
+  UNIVERSAL_ROUTER_ADDRESSES,
   USDC_ADDRESS,
 };

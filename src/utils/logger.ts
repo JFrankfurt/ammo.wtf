@@ -3,20 +3,20 @@
 // (e.g., logging levels, sending logs to a server, etc.)
 
 export const logger = {
-    debug: (...args: any[]) => {
+    debug: (fileName: string, ...args: any[]) => {
         // In development or when explicitly enabled, log debug messages
         if (process.env.NODE_ENV === 'development' || process.env.REACT_APP_DEBUG_LOGGING === 'true') {
-             console.debug('[DEBUG]', ...args);
+             console.debug('[DEBUG]', fileName, ...args);
         }
     },
-    info: (...args: any[]) => {
-        console.info('[INFO]', ...args);
+    info: (fileName: string, ...args: any[]) => {
+        console.info('[INFO]', fileName, ...args);
     },
-    warn: (...args: any[]) => {
-        console.warn('[WARN]', ...args);
+    warn: (fileName: string, ...args: any[]) => {
+        console.warn('[WARN]', fileName, ...args);
     },
-    error: (...args: any[]) => {
-        console.error('[ERROR]', ...args);
+    error: (fileName: string, ...args: any[]) => {
+        console.error('[ERROR]', fileName, ...args);
         // Potentially send errors to a tracking service like Sentry here
     },
 }; 
