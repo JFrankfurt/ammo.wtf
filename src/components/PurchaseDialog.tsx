@@ -9,7 +9,7 @@ import {
 import { Fragment, useState, useMemo } from "react";
 import { useAccount, useBalance, useChainId } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { BaseError } from "viem";
+import { Address, BaseError, formatUnits } from "viem";
 import { FormInput } from "./FormInput";
 import { Button } from "./Button";
 import { OrderSummary } from "./OrderSummary";
@@ -17,11 +17,12 @@ import { usePurchaseCalculations } from "../hooks/usePurchaseCalculations";
 import { usePurchaseSwap } from "../hooks/usePurchaseSwap";
 import { USDC_ADDRESS } from "../addresses";
 import { useDebounceValue } from "usehooks-ts";
-
+import { useQuoter } from "../hooks/useQuoter";
+import { logger } from "@/utils/logger";
 interface PurchaseDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  tokenAddress: string;
+  tokenAddress: Address;
   tokenName?: string;
   tokenSymbol?: string;
   onSuccess: (txHash: string) => void;
@@ -74,17 +75,30 @@ export const PurchaseDialog = ({
   const isSwapEnabled =
     isConnected && !!usdcTokenAddress && !!tokenAddress && parsedAmount > 0;
 
-  const { swapState, executeSwap } = usePurchaseSwap({
-    amountUSDC: debouncedAmount,
-    totalCostUSDC: totalCost,
-    parsedAmountUSDC: parsedAmount,
+  const { data: quoteData, isLoading } = useQuoter({
     tokenOutAddress: tokenAddress,
-    slippagePercentage: SLIPPAGE_PERCENTAGE,
-    chainId: chainId,
-    onSuccess: onSuccess,
-    onError: onError,
+    amountIn: debouncedAmount,
     enabled: isSwapEnabled,
   });
+
+  const quotedOutputAmount = formatUnits(
+    ((quoteData as [bigint, bigint]) || [0n, 0n])[0],
+    18
+  );
+
+  logger.info("quoteData", quoteData);
+
+  // const { swapState, executeSwap } = usePurchaseSwap({
+  //   amountUSDC: debouncedAmount,
+  //   totalCostUSDC: totalCost,
+  //   parsedAmountUSDC: parsedAmount,
+  //   tokenOutAddress: tokenAddress,
+  //   slippagePercentage: SLIPPAGE_PERCENTAGE,
+  //   chainId: chainId,
+  //   onSuccess: onSuccess,
+  //   onError: onError,
+  //   enabled: isSwapEnabled,
+  // });
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(e.target.value);
@@ -94,19 +108,18 @@ export const PurchaseDialog = ({
     if (!isConnected) {
       openConnectModal?.();
     } else if (isSwapEnabled) {
-      executeSwap();
+      // executeSwap();
     } else {
       console.warn("Swap button clicked but conditions not met.");
     }
   };
 
-  const isButtonDisabled =
-    isConnected && (!isSwapEnabled || swapState.loading || !swapState.quote);
+  const isButtonDisabled = isConnected; // && (!isSwapEnabled || swapState.loading || !swapState.quote);
 
-  const explorerUrl = useMemo(() => {
-    const baseUrl = chainId === 8453 ? "basescan.org" : "sepolia.etherscan.io";
-    return swapState.txHash ? `https://${baseUrl}/tx/${swapState.txHash}` : "#";
-  }, [chainId, swapState.txHash]);
+  // const explorerUrl = useMemo(() => {
+  //   const baseUrl = chainId === 8453 ? "basescan.org" : "sepolia.etherscan.io";
+  //   return swapState.txHash ? `https://${baseUrl}/tx/${swapState.txHash}` : "#";
+  // }, [chainId, swapState.txHash]);
 
   return (
     <Transition show={isOpen} as={Fragment}>
@@ -191,7 +204,7 @@ export const PurchaseDialog = ({
                     shippingFee={shippingFee}
                     totalCost={totalCost}
                     shippingFeePercentage={SHIPPING_FEE_PERCENTAGE}
-                    estimatedOutputAmount={swapState.quote?.outputAmount}
+                    estimatedOutputAmount={quotedOutputAmount}
                     outputTokenSymbol={tokenSymbol}
                     currencySymbol="USDC"
                   />
@@ -226,29 +239,9 @@ export const PurchaseDialog = ({
                     onClick={handleButtonClick}
                     disabled={isButtonDisabled}
                   >
-                    {!isConnected ? (
-                      "Connect Wallet"
-                    ) : swapState.loading ? (
-                      <div className="flex items-center justify-center">
-                        <svg
-                          className="animate-spin h-4 w-4 mr-2 text-accentGreen"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            d="M12 2 L12 5 M12 19 L12 22 M5 12 L2 12 M22 12 L19 12 M19.07 4.93 L16.95 7.05 M7.05 16.95 L4.93 19.07 M19.07 19.07 L16.95 16.95 M7.05 7.05 L4.93 4.93"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <span className="font-mono">Processing...</span>
-                      </div>
-                    ) : (
-                      `Complete Purchase`
-                    )}
+                    {!isConnected ? "Connect Wallet" : `Complete Purchase`}
                   </Button>
-
+                  {/* 
                   {swapState.error && (
                     <div className="bg-destructive/10 text-destructive p-2 rounded-none text-xs border border-destructive space-y-1 max-h-32 overflow-y-auto">
                       <p className="font-medium">Transaction Failed</p>
@@ -273,7 +266,7 @@ export const PurchaseDialog = ({
                         View Transaction
                       </a>
                     </div>
-                  )}
+                  )} */}
 
                   <p className="text-xs text-muted text-center mt-2">
                     You agree to our Terms of Service and acknowledge that
