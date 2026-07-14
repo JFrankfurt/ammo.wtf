@@ -1,121 +1,76 @@
 import React, { forwardRef } from "react";
-import { cn } from "../utils/cn"; // Assuming cn handles class merging
+import { cn } from "../utils/cn";
 
 interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  error?: string | { message?: string } | any; // Keep flexible error type for now
-  // Retain size variants, potentially useful
+  error?: string | { message?: string };
   sizeVariant?: "default" | "small" | "compact";
-  // Note: The 'compact' prop seems redundant if sizeVariant exists, consider removing later
   compact?: boolean;
 }
+
+const SIZE_CLASSES = {
+  default: {
+    wrapper: "gap-1.5",
+    label: "text-xs font-medium",
+    input: "h-10 px-3 py-2 text-xs",
+    error: "text-xs",
+  },
+  small: {
+    wrapper: "gap-1",
+    label: "text-xs",
+    input: "h-8 px-2 py-1 text-xs",
+    error: "text-xs",
+  },
+  compact: {
+    wrapper: "gap-1",
+    label: "text-xs",
+    input: "h-9 px-3 py-1 text-xs",
+    error: "text-xs",
+  },
+} as const;
 
 export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
   function FormInput(
     {
       label,
       error,
-      className = "",
-      // Default to 'default' size
+      className,
       sizeVariant = "default",
-      // Deprecate 'compact' in favor of sizeVariant? For now, keep logic.
       compact = false,
-      id, // Ensure id is passed for label association
+      id,
       ...props
     },
     ref
   ) {
-    // Simplified error message extraction
-    const errorMessage =
-      error && typeof error === "object" ? error.message : error;
-
-    // Determine size-based classes using standard Tailwind utilities where possible
-    const getSizeClasses = () => {
-      // Use the explicit compact prop if provided, otherwise use sizeVariant
-      const effectiveSize = compact ? "compact" : sizeVariant;
-
-      switch (effectiveSize) {
-        case "small":
-          return {
-            wrapperGap: "gap-1",
-            label: "text-xs", // Standard Tailwind size
-            input: "h-8 px-2 py-1 text-xs", // Standard Tailwind size
-            error: "text-xs", // Standard Tailwind size
-          };
-        case "compact":
-          return {
-            wrapperGap: "gap-1",
-            label: "text-xs", // Changed from text-sm to text-xs for consistency
-            input: "h-9 px-3 py-1 text-xs", // Changed from text-sm to text-xs
-            error: "text-xs", // Changed from text-sm to text-xs
-          };
-        case "default":
-        default:
-          return {
-            wrapperGap: "gap-1.5",
-            // Use theme values if defined, otherwise fall back to Tailwind defaults
-            label: "text-xs font-medium", // Changed from text-sm to text-xs
-            input: "h-10 px-3 py-2 text-xs", // Changed from text-sm to text-xs
-            error: "text-xs", // Changed from text-sm to text-xs
-          };
-      }
-    };
-
-    const sizeClasses = getSizeClasses();
-
-    // Generate a unique ID if one isn't provided, crucial for accessibility
-    const inputId = id || `form-input-${React.useId()}`;
+    const generatedId = React.useId();
+    const inputId = id || `form-input-${generatedId}`;
+    const errorMessage = typeof error === "string" ? error : error?.message;
+    const size = SIZE_CLASSES[compact ? "compact" : sizeVariant];
 
     return (
-      <div className={cn("flex flex-col", sizeClasses.wrapperGap)}>
-        <label
-          htmlFor={inputId} // Use the generated or passed id
-          // Use semantic colors from the theme
-          className={cn(sizeClasses.label, "text-form-label")}
-        >
-          {label}
-        </label>
+      <div className={cn("flex flex-col", size.wrapper)}>
+        {label && (
+          <label htmlFor={inputId} className={cn(size.label, "text-form-label")}>
+            {label}
+          </label>
+        )}
         <input
           ref={ref}
-          id={inputId} // Apply the id to the input
+          id={inputId}
           className={cn(
-            // Base input styles using theme colors/settings
-            "w-full", // Inputs should generally be full width within their container
-            "border",
-            "rounded-md", // Use theme's default rounding (2px)
-            "bg-form-input-background", // Use theme color
-            "text-form-input-text", // Use theme color
-            "placeholder:text-form-input-placeholder", // Use theme color
-
-            // Focus state using standard ring utilities and theme color
-            "focus:outline-none",
-            "focus:ring-2",
-            "focus:ring-ring", // Use theme's accentGreen ring
-            "focus:ring-offset-2",
-            "focus:ring-offset-background", // Offset against theme background
-
-            // Border color logic: Red if error, focus color during focus (handled by ring), default otherwise
+            "w-full rounded-md border bg-form-input-background text-form-input-text placeholder:text-form-input-placeholder",
+            "focus:border-form-input-border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background",
+            "disabled:cursor-not-allowed disabled:border-form-input-disabled/20 disabled:bg-form-input-disabled/50 disabled:text-muted",
             errorMessage
-              ? "border-form-error" // Use theme error color (accentRed)
-              : "border-form-input-border", // Use theme default border color
-            "focus:border-form-input-border", // Keep default border color even on focus (ring provides visual cue)
-
-            // Disabled state using theme colors
-            "disabled:cursor-not-allowed",
-            "disabled:bg-form-input-disabled/50", // Use theme color with opacity
-            "disabled:text-muted", // Muted text
-            "disabled:border-form-input-disabled/20", // Fainter border
-
-            // Apply size-specific input classes
-            sizeClasses.input,
-
-            // Allow overriding classes
+              ? "border-form-error"
+              : "border-form-input-border",
+            size.input,
             className
           )}
           {...props}
         />
         {errorMessage && (
-          <span className={cn("text-form-error", sizeClasses.error)}>
+          <span className={cn("text-form-error", size.error)}>
             {errorMessage}
           </span>
         )}

@@ -24,13 +24,14 @@ export function parseWalletError(error: unknown): ParsedWalletError {
 
   if (!error) return defaultError;
 
-  // Convert error to string if it's not already
+  // Never serialize arbitrary wallet/provider objects. They can contain full
+  // transaction requests, signatures, encrypted payloads, or other large data.
   const errorString =
     typeof error === "string"
       ? error
       : error instanceof Error
-      ? error.message
-      : JSON.stringify(error);
+        ? error.message
+        : "";
 
   // Check for user rejection patterns
   if (
@@ -137,15 +138,9 @@ export function parseWalletError(error: unknown): ParsedWalletError {
     }
   }
 
-  // If we couldn't identify a specific error, return a generic message
-  // but include the original error as details for debugging
-  return {
-    ...defaultError,
-    details:
-      errorString.length > 100
-        ? `${errorString.substring(0, 100)}...`
-        : errorString,
-  };
+  // Do not echo unknown provider messages. viem errors can embed calldata,
+  // payment amounts, permit signatures, or encrypted shipping payloads.
+  return defaultError;
 }
 
 /**

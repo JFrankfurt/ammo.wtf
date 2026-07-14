@@ -1,47 +1,77 @@
-name: Deploy to GitHub Pages
+name: Verify and deploy
 
 on:
   push:
-    branches:
-      - main # Or your default branch
-  workflow_dispatch: # Allows manual triggering
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write # Needed to deploy to GitHub Pages
-  id-token: write # Needed for OIDC token if using that (optional but recommended)
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Checkout 🛎️
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20" # Match your development environment
+          node-version: "20"
           cache: "yarn"
 
-      - name: Install dependencies 📦
+      - name: Use Yarn Classic
+        run: corepack enable && corepack prepare yarn@1.22.22 --activate
+
+      - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Build project 🏗️
+      - name: Lint
+        run: yarn lint
+
+      - name: Test
+        run: yarn test
+
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Build
         run: yarn build
 
-      # This step is usually not needed if CNAME is in public/
-      # but added for robustness in case GitHub Pages settings change.
-      # It ensures the CNAME file exists in the build output.
-      - name: Ensure CNAME exists  CNAME
-        run: echo "ammo.wtf" > dist/CNAME
+      - name: Upload site artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist
+          if-no-files-found: error
 
-      - name: Deploy to GitHub Pages 🚀
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          # publish_branch: gh-pages # Default is gh-pages
-          # cname: ammo.wtf # Handled by file in publish_dir
-          user_name: "github-actions[bot]" # Optional: Committer name
-          user_email: "github-actions[bot]@users.noreply.github.com" # Optional: Committer email
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"

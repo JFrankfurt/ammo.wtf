@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { Providers } from "./providers";
-import "@rainbow-me/rainbowkit/styles.css";
 import LoadingFallback from "./components/LoadingFallback";
 
 const HomePage = lazy(() => import("./pages/HomePage"));

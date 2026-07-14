@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { useReadContracts } from "wagmi";
-import { default as erc20Abi } from "../abi/ammoTokenERC20";
-import type { TokenInfo } from "../addresses";
+import ammoTokenAbi from "../abi/ammoToken";
+import { SEPOLIA_CONFIG, type TokenInfo } from "../addresses";
 
 
 interface TokensBalances {
   balances: Record<`0x${string}`, number>;
   isLoading: boolean;
-  isError: boolean;
-};
+}
 
 /**
  * Custom hook to fetch balances for multiple tokens
@@ -16,18 +15,21 @@ interface TokensBalances {
  * @param address User address to check balances for
  * @returns Object containing balances and loading state
  */
-export function useTokenBalances(tokens: TokenInfo[], address?: `0x${string}`): TokensBalances {
+export function useTokenBalances(
+  tokens: TokenInfo[],
+  address?: `0x${string}`
+): TokensBalances {
   const [balances, setBalances] = useState<Record<string, number>>({});
 
   // Prepare contracts config for batch reading
   const contractsConfig = tokens.map((token) => ({
     address: token.address as `0x${string}`,
-    abi: erc20Abi,
+    abi: ammoTokenAbi,
     functionName: "balanceOf",
     args: [address as `0x${string}`],
   }));
 
-  const { data, isLoading, isError } = useReadContracts({
+  const { data, isLoading } = useReadContracts({
     contracts: contractsConfig,
     query: {
       enabled: !!address && tokens.length > 0,
@@ -49,7 +51,9 @@ export function useTokenBalances(tokens: TokenInfo[], address?: `0x${string}`): 
     data.forEach((result, index) => {
       if (result.status === "success" && result.result) {
         const tokenAddress = tokens[index].address;
-        newBalances[tokenAddress] = Number(result.result) / Math.pow(10, 18);
+        newBalances[tokenAddress] =
+          Number(result.result) /
+          Math.pow(10, SEPOLIA_CONFIG.decimals.ammoToken);
       }
     });
 
@@ -59,6 +63,5 @@ export function useTokenBalances(tokens: TokenInfo[], address?: `0x${string}`): 
   return {
     balances,
     isLoading,
-    isError,
   };
 }

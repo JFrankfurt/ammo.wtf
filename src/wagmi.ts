@@ -1,16 +1,14 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { http } from "wagmi";
-import { base, sepolia } from "wagmi/chains";
+import { sepolia } from "wagmi/chains";
 
 export const config = getDefaultConfig({
   appName: "ammo.wtf",
   projectId: "90d5103a33c09cd272b535dbfffa8fe2",
-  chains: [sepolia, base],
+  chains: [sepolia],
   transports: {
-    // @ts-ignore
+    // @ts-ignore viem is duplicated by the current wagmi dependency tree.
     [sepolia.id]: http(),
-    // @ts-ignore
-    [base.id]: http(),
   },
   ssr: false,
 });

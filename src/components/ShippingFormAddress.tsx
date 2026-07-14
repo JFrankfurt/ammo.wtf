@@ -1,36 +1,15 @@
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { z } from "zod";
-import { shippingSchema } from "../data/shipping-validation";
+import {
+  SHIPPING_STATE_OPTIONS,
+  shippingSchema,
+} from "../data/shipping-validation";
 import { FormInput } from "./FormInput";
 import { FormSelect } from "./FormSelect";
 import { Button } from "./Button";
 import { cn } from "../utils/cn";
 
-// Define a more flexible form data type that works with both components
-export type FormDataWithRequiredFields = {
-  recipient: {
-    name: string;
-    email: string;
-    phone: string | undefined;
-  };
-  address: {
-    street1: string;
-    street2: string | undefined;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: "US";
-  };
-  preferences: {
-    requireSignature: boolean;
-    insurance: boolean;
-    specialInstructions: string;
-  };
-  metadata: {
-    version: "1.0";
-    origin: string;
-  };
-};
+export type FormDataWithRequiredFields = z.input<typeof shippingSchema>;
 
 interface ShippingFormAddressProps {
   register: UseFormRegister<FormDataWithRequiredFields>;
@@ -130,50 +109,7 @@ export const ShippingFormAddress = ({
             sizeVariant="small"
             options={[
               { value: "", label: "Select State" },
-              { value: "AL", label: "AL" },
-              { value: "AZ", label: "AZ" },
-              { value: "AR", label: "AR" },
-              { value: "CA", label: "CA" },
-              { value: "CO", label: "CO" },
-              { value: "CT", label: "CT" },
-              { value: "DE", label: "DE" },
-              { value: "FL", label: "FL" },
-              { value: "GA", label: "GA" },
-              { value: "ID", label: "ID" },
-              { value: "IN", label: "IN" },
-              { value: "IA", label: "IA" },
-              { value: "KS", label: "KS" },
-              { value: "KY", label: "KY" },
-              { value: "LA", label: "LA" },
-              { value: "ME", label: "ME" },
-              { value: "MD", label: "MD" },
-              { value: "MI", label: "MI" },
-              { value: "MN", label: "MN" },
-              { value: "MS", label: "MS" },
-              { value: "MO", label: "MO" },
-              { value: "MT", label: "MT" },
-              { value: "NE", label: "NE" },
-              { value: "NV", label: "NV" },
-              { value: "NH", label: "NH" },
-              { value: "NM", label: "NM" },
-              { value: "NC", label: "NC" },
-              { value: "ND", label: "ND" },
-              { value: "OH", label: "OH" },
-              { value: "OK", label: "OK" },
-              { value: "OR", label: "OR" },
-              { value: "PA", label: "PA" },
-              { value: "RI", label: "RI" },
-              { value: "SC", label: "SC" },
-              { value: "SD", label: "SD" },
-              { value: "TN", label: "TN" },
-              { value: "TX", label: "TX" },
-              { value: "UT", label: "UT" },
-              { value: "VT", label: "VT" },
-              { value: "VA", label: "VA" },
-              { value: "WA", label: "WA" },
-              { value: "WV", label: "WV" },
-              { value: "WI", label: "WI" },
-              { value: "WY", label: "WY" },
+              ...SHIPPING_STATE_OPTIONS,
             ]}
           />
         </div>
@@ -310,7 +246,7 @@ export const ShippingFormAddress = ({
               <span className="font-mono">Processing...</span>
             </div>
           ) : (
-            "Complete Shipping"
+            "Sign Permits & Ship"
           )}
         </Button>
       </div>

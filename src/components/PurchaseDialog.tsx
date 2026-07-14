@@ -6,30 +6,26 @@ import {
   TransitionChild,
   CloseButton,
 } from "@headlessui/react";
-import { Fragment, useState, useMemo } from "react";
-import { useAccount, useBalance, useChainId } from "wagmi";
+import { Fragment, useState } from "react";
+import { useAccount } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { Address, BaseError, formatUnits } from "viem";
+import { Address } from "viem";
 import { FormInput } from "./FormInput";
 import { Button } from "./Button";
 import { OrderSummary } from "./OrderSummary";
-import { usePurchaseCalculations } from "../hooks/usePurchaseCalculations";
-import { usePurchaseSwap } from "../hooks/usePurchaseSwap";
-import { USDC_ADDRESS } from "../addresses";
+import { TransactionStatus } from "./TransactionStatus";
 import { useDebounceValue } from "usehooks-ts";
-import { useQuoter } from "../hooks/useQuoter";
-import { logger } from "@/utils/logger";
+import { useSepoliaPurchase } from "@/hooks/useSepoliaPurchase";
+
 interface PurchaseDialogProps {
   isOpen: boolean;
   onClose: () => void;
   tokenAddress: Address;
   tokenName?: string;
   tokenSymbol?: string;
-  onSuccess: (txHash: string) => void;
-  onError: (error: Error) => void;
 }
 
-const SLIPPAGE_PERCENTAGE = 5;
+const SLIPPAGE_BPS = 500;
 const SHIPPING_FEE_PERCENTAGE = 10;
 const ESTIMATED_DELIVERY = "2-4 weeks";
 
@@ -39,87 +35,45 @@ export const PurchaseDialog = ({
   tokenAddress,
   tokenName = "AmmoToken",
   tokenSymbol = "AMMO",
-  onSuccess,
-  onError,
 }: PurchaseDialogProps) => {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
+  const { isConnected, chainId } = useAccount();
   const { openConnectModal } = useConnectModal();
   const [amount, setAmount] = useState("");
   const [debouncedAmount] = useDebounceValue(amount, 500);
-
-  const usdcTokenAddress = useMemo(
-    () => USDC_ADDRESS[chainId] || "",
-    [chainId]
-  );
-  const { data: usdcBalance } = useBalance({
-    address,
-    token: usdcTokenAddress,
-    chainId: chainId,
-    query: {
-      enabled: isConnected && !!usdcTokenAddress,
-    },
+  const purchase = useSepoliaPurchase({
+    subtotalInput: debouncedAmount,
+    tokenOut: tokenAddress,
+    slippageBps: SLIPPAGE_BPS,
+    enabled: isOpen,
   });
-
-  const formattedUsdcBalance = useMemo(() => {
-    if (!usdcBalance) return "0.00";
-    return parseFloat(usdcBalance.formatted).toFixed(2);
-  }, [usdcBalance]);
-
-  const { subtotal, shippingFee, totalCost, parsedAmount } =
-    usePurchaseCalculations({
-      amount: debouncedAmount,
-      shippingFeePercentage: SHIPPING_FEE_PERCENTAGE,
-    });
-
-  const isSwapEnabled =
-    isConnected && !!usdcTokenAddress && !!tokenAddress && parsedAmount > 0;
-
-  const { data: quoteData, isLoading } = useQuoter({
-    tokenOutAddress: tokenAddress,
-    amountIn: debouncedAmount,
-    enabled: isSwapEnabled,
-  });
-
-  const quotedOutputAmount = formatUnits(
-    ((quoteData as [bigint, bigint]) || [0n, 0n])[0],
-    18
-  );
-
-  logger.info("quoteData", quoteData);
-
-  // const { swapState, executeSwap } = usePurchaseSwap({
-  //   amountUSDC: debouncedAmount,
-  //   totalCostUSDC: totalCost,
-  //   parsedAmountUSDC: parsedAmount,
-  //   tokenOutAddress: tokenAddress,
-  //   slippagePercentage: SLIPPAGE_PERCENTAGE,
-  //   chainId: chainId,
-  //   onSuccess: onSuccess,
-  //   onError: onError,
-  //   enabled: isSwapEnabled,
-  // });
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(e.target.value);
   };
 
-  const handleButtonClick = () => {
+  const handleButtonClick = async () => {
     if (!isConnected) {
       openConnectModal?.();
-    } else if (isSwapEnabled) {
-      // executeSwap();
-    } else {
-      console.warn("Swap button clicked but conditions not met.");
+      return;
     }
+    await purchase.executePurchase().catch(() => undefined);
   };
 
-  const isButtonDisabled = isConnected; // && (!isSwapEnabled || swapState.loading || !swapState.quote);
-
-  // const explorerUrl = useMemo(() => {
-  //   const baseUrl = chainId === 8453 ? "basescan.org" : "sepolia.etherscan.io";
-  //   return swapState.txHash ? `https://${baseUrl}/tx/${swapState.txHash}` : "#";
-  // }, [chainId, swapState.txHash]);
+  const statusMessage: Partial<Record<typeof purchase.status, string>> = {
+    quoting: "Fetching exact-input quote…",
+    "approving-erc20": "Approving exact USDC amount for Permit2…",
+    "approving-permit2":
+      "Approving exact Permit2 amount for Universal Router…",
+    swapping: "Submitting swap and waiting for confirmation…",
+    success: "Purchase confirmed.",
+  };
+  const transactionStatus = purchase.error
+    ? "error"
+    : purchase.status === "success"
+      ? "success"
+      : statusMessage[purchase.status]
+        ? "pending"
+        : "idle";
 
   return (
     <Transition show={isOpen} as={Fragment}>
@@ -165,6 +119,11 @@ export const PurchaseDialog = ({
 
               <div className="flex flex-col w-full space-y-3">
                 <p className="text-xs text-muted w-full">{tokenName}</p>
+                {isConnected && purchase.disabledReason?.includes("Sepolia") && (
+                  <p className="text-xs text-accentRed">
+                    Purchases support Sepolia only. Base is not supported.
+                  </p>
+                )}
 
                 <div className="w-full space-y-3">
                   <div className="relative">
@@ -179,7 +138,7 @@ export const PurchaseDialog = ({
                         <div className="text-xs text-muted">
                           <span>Balance: </span>
                           <span className="font-mono font-medium text-foreground">
-                            ${formattedUsdcBalance}
+                            {purchase.usdcBalanceFormatted} USDC
                           </span>
                         </div>
                       )}
@@ -200,13 +159,29 @@ export const PurchaseDialog = ({
                   </div>
 
                   <OrderSummary
-                    subtotal={subtotal}
-                    shippingFee={shippingFee}
-                    totalCost={totalCost}
+                    subtotal={purchase.amounts.subtotal}
+                    shippingFee={purchase.amounts.fee}
+                    totalCost={purchase.amounts.total}
                     shippingFeePercentage={SHIPPING_FEE_PERCENTAGE}
-                    estimatedOutputAmount={quotedOutputAmount}
+                    estimatedOutputAmount={purchase.quoteFormatted ?? undefined}
                     outputTokenSymbol={tokenSymbol}
                     currencySymbol="USDC"
+                  />
+
+                  {purchase.disabledReason ===
+                    "Insufficient USDC balance." && (
+                    <p className="text-xs text-accentRed">
+                      Insufficient balance: purchase requires{" "}
+                      {purchase.amounts.total} USDC.
+                    </p>
+                  )}
+
+                  <TransactionStatus
+                    status={transactionStatus}
+                    message={statusMessage[purchase.status]}
+                    error={purchase.error}
+                    hash={purchase.txHash}
+                    chainId={chainId}
                   />
 
                   <div className="bg-muted/10 p-2 rounded-none text-xs border border-border">
@@ -237,36 +212,17 @@ export const PurchaseDialog = ({
                     variant="primary"
                     fullWidth
                     onClick={handleButtonClick}
-                    disabled={isButtonDisabled}
+                    disabled={isConnected && !purchase.canPurchase}
                   >
-                    {!isConnected ? "Connect Wallet" : `Complete Purchase`}
+                    {!isConnected
+                      ? "Connect Wallet"
+                      : purchase.status === "approving-erc20" ||
+                        purchase.status === "approving-permit2"
+                      ? "Awaiting Approval"
+                      : purchase.status === "swapping"
+                      ? "Completing Purchase"
+                      : "Complete Purchase"}
                   </Button>
-                  {/* 
-                  {swapState.error && (
-                    <div className="bg-destructive/10 text-destructive p-2 rounded-none text-xs border border-destructive space-y-1 max-h-32 overflow-y-auto">
-                      <p className="font-medium">Transaction Failed</p>
-                      <p className="font-mono break-words">
-                        Reason:{" "}
-                        {swapState.error instanceof BaseError
-                          ? swapState.error.shortMessage
-                          : swapState.error.message}
-                      </p>
-                    </div>
-                  )}
-
-                  {swapState.txHash && (
-                    <div className="bg-accentGreen/10 text-accentGreen p-2 rounded-none text-xs border border-accentGreen">
-                      <p className="font-medium font-mono">Order Confirmed!</p>
-                      <a
-                        href={explorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-foreground underline font-mono"
-                      >
-                        View Transaction
-                      </a>
-                    </div>
-                  )} */}
 
                   <p className="text-xs text-muted text-center mt-2">
                     You agree to our Terms of Service and acknowledge that

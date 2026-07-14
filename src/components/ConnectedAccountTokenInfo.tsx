@@ -7,7 +7,11 @@ import {
   Suspense,
 } from "react";
 import { useAccount, useBalance } from "wagmi";
-import { getTokensForChain, type TokenInfo, USDC_ADDRESS } from "../addresses";
+import {
+  getChainConfig,
+  type TokenInfo,
+  requireChainConfig,
+} from "../addresses";
 import { Button } from "./Button";
 import { TokenBalanceSummary } from "./TokenBalanceSummary";
 import { Transition } from "@headlessui/react";
@@ -41,7 +45,9 @@ const ConnectedAccountTokenInfo = () => {
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
   const [selectorMode, setSelectorMode] = useState<"ship" | "purchase">("ship");
   const [isExpanded, setIsExpanded] = useState(false);
+  const [actionError, setActionError] = useState("");
   const { status, address, chainId } = useAccount();
+  const chainConfig = getChainConfig(chainId);
 
   // Initialize expanded state based on screen size using useEffect.
   // This effect runs once on mount and then only when the window resizes.
@@ -60,7 +66,7 @@ const ConnectedAccountTokenInfo = () => {
   const { data: usdcBalance, isLoading: isLoadingUsdcBalance } = useBalance({
     address,
     // Ensure chainId is defined before accessing USDC_ADDRESS map.
-    token: chainId ? USDC_ADDRESS[chainId] : undefined,
+    token: chainConfig?.contracts.usdc,
     // Consider adding `query: { enabled: !!address && !!chainId }` if necessary
     // to prevent unnecessary fetches when address or chainId is missing.
   });
@@ -92,30 +98,23 @@ const ConnectedAccountTokenInfo = () => {
   // if TokenSelectorDialog is memoized (e.g., with React.memo).
   const handleSelectToken = useCallback(
     (token: TokenInfo, action: "ship" | "purchase") => {
+      try {
+        requireChainConfig(chainId, action === "ship" ? "Shipping" : "Purchase");
+        setActionError("");
+      } catch (error) {
+        setActionError(
+          error instanceof Error ? error.message : "Unsupported network"
+        );
+        return;
+      }
       if (action === "ship") {
         openShippingForm(token);
       } else {
         openPurchaseDialog(token);
       }
     },
-    [openShippingForm, openPurchaseDialog] // Dependencies: ensure the handler updates if these callbacks change.
+    [chainId, openShippingForm, openPurchaseDialog]
   );
-
-  // Memoized handler for successful purchase.
-  const handlePurchaseSuccess = useCallback((txHash: string) => {
-    // TODO: Add user feedback for successful purchase (e.g., toast notification).
-    console.log("Purchase successful, Tx Hash:", txHash);
-    setIsPurchaseOpen(false);
-    // Consider triggering a balance refresh here.
-  }, []); // No dependencies.
-
-  // Memoized handler for purchase errors.
-  const handlePurchaseError = useCallback((error: Error) => {
-    // TODO: Add user-friendly error feedback.
-    console.error("Purchase error:", error);
-    // Optionally close the dialog or keep it open for retry.
-    // setIsPurchaseOpen(false);
-  }, []); // No dependencies.
 
   // Memoized handler for toggling the expansion state.
   const toggleExpand = useCallback(() => {
@@ -163,7 +162,6 @@ const ConnectedAccountTokenInfo = () => {
               isOpen={isShippingOpen}
               onClose={() => setIsShippingOpen(false)}
               address={address as `0x${string}`} // Type assertion needed as address can be undefined initially
-              tokenAddress={selectedToken.address as `0x${string}`}
             />
           )}
           {selectedToken && isPurchaseOpen && (
@@ -173,8 +171,6 @@ const ConnectedAccountTokenInfo = () => {
               tokenAddress={selectedToken.address}
               tokenName={selectedToken.name}
               tokenSymbol={selectedToken.symbol}
-              onSuccess={handlePurchaseSuccess}
-              onError={handlePurchaseError}
             />
           )}
         </Suspense>
@@ -265,6 +261,9 @@ const ConnectedAccountTokenInfo = () => {
             >
               {/* Padding applied here to be part of the scrollable area */}
               <div className="p-3 pt-2">
+                {actionError && (
+                  <p className="mb-2 text-xs text-accentRed">{actionError}</p>
+                )}
                 {/* Render token balances; pass memoized handler */}
                 <TokenBalanceSummary onTokenAction={handleSelectToken} />
               </div>

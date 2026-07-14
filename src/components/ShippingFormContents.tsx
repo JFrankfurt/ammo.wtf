@@ -7,24 +7,26 @@ interface ShippingFormContentsProps {
   selectedTokens: TokenInfo[];
   quantities: Record<string, number>;
   handleQuantityChange: (address: string, value: number) => void;
-  totalTokens: number;
+  totalRounds: number;
   totalValueUsd: number;
   hasSelectedQuantities: boolean;
   onContinue: () => void;
   balancesLoading: boolean;
   tokenBalances: Record<string, number>;
+  disabledReason: string | null;
 }
 
 export const ShippingFormContents = ({
   selectedTokens,
   quantities,
   handleQuantityChange,
-  totalTokens,
+  totalRounds,
   totalValueUsd,
   hasSelectedQuantities,
   onContinue,
   balancesLoading,
   tokenBalances,
+  disabledReason,
 }: ShippingFormContentsProps) => {
   return (
     <div className="space-y-4 md:space-y-6">
@@ -62,6 +64,14 @@ export const ShippingFormContents = ({
           <div className="mb-2 font-medium text-muted">
             Select the quantity of each token to ship:
           </div>
+          {disabledReason && (
+            <div
+              role="alert"
+              className="border border-destructive bg-destructive/10 p-3 text-xs font-mono text-destructive"
+            >
+              {disabledReason}
+            </div>
+          )}
 
           <div className="max-h-[50vh] overflow-y-auto pr-1 space-y-3 md:space-y-4">
             {selectedTokens.map((token) => (
@@ -84,7 +94,8 @@ export const ShippingFormContents = ({
                       type="range"
                       min="0"
                       max={Math.floor(
-                        (tokenBalances[token.address] || 0) / 250
+                        (tokenBalances[token.address] || 0) /
+                          token.product.roundsPerUnit
                       )}
                       step="1"
                       value={quantities[token.address] || 0}
@@ -102,13 +113,14 @@ export const ShippingFormContents = ({
                       type="number"
                       min="0"
                       max={Math.floor(
-                        (tokenBalances[token.address] || 0) / 250
+                        (tokenBalances[token.address] || 0) /
+                          token.product.roundsPerUnit
                       )}
                       value={quantities[token.address] || 0}
                       onChange={(e) =>
                         handleQuantityChange(
                           token.address,
-                          parseInt(e.target.value)
+                          Number.parseInt(e.target.value, 10) || 0
                         )
                       }
                       className={cn(
@@ -128,12 +140,18 @@ export const ShippingFormContents = ({
 
                 <div className="mt-2 md:mt-3 text-xs text-muted">
                   <span className="font-medium font-mono">
-                    {(quantities[token.address] || 0) * 250} rounds
+                    {(quantities[token.address] || 0) *
+                      token.product.roundsPerUnit}{" "}
+                    rounds
                   </span>{" "}
                   selected
                   <span className="ml-1 font-mono text-muted/80">
                     (~$
-                    {((quantities[token.address] || 0) * 250 * 0.3).toFixed(2)})
+                    {(
+                      (quantities[token.address] || 0) *
+                      token.product.roundsPerUnit *
+                      token.product.estimatedValueUsdPerRound
+                    ).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -147,7 +165,7 @@ export const ShippingFormContents = ({
                 Total Rounds:
               </div>
               <div className="font-bold text-accentGreen font-mono">
-                {totalTokens}
+                {totalRounds}
               </div>
             </div>
             <div className="flex justify-between items-center">
@@ -164,7 +182,7 @@ export const ShippingFormContents = ({
           <div className="mt-6">
             <Button
               onClick={onContinue}
-              disabled={!hasSelectedQuantities}
+              disabled={!hasSelectedQuantities || Boolean(disabledReason)}
               className="w-full"
             >
               Continue to Shipping
@@ -183,7 +201,8 @@ export const ShippingFormContents = ({
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              You will need to confirm a transaction to complete shipping.
+              Your wallet will request one exact permit per product, then one
+              redemption transaction.
             </div>
           </div>
         </div>

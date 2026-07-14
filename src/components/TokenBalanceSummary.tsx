@@ -1,14 +1,16 @@
-import { getTokensForChain, type TokenInfo } from "@/addresses";
+import {
+  getTokensForChain,
+  isSupportedChainId,
+  SUPPORTED_CHAIN_ID,
+  type TokenInfo,
+} from "@/addresses";
 import { TokenPriceDisplay } from "@/components/TokenPriceDisplay";
 import { TokenPropertyChip } from "@/components/TokenPropertyChip";
 import { useTokenBalances } from "@/hooks/useTokenBalances";
-import { fallbackChainId } from "@/utils/chains";
 import { useCallback, useMemo, useState } from "react";
 import { useDebounceValue } from "usehooks-ts";
 import { useAccount } from "wagmi";
 import { Button } from "./Button";
-import { isSupportedNetwork } from "@/utils/networks";
-import { sepolia } from "viem/chains";
 import { cn } from "@/utils/cn";
 
 interface TokenBalanceSummaryProps {
@@ -25,7 +27,7 @@ export const TokenBalanceSummary = ({
 
   // Get all tokens for the current chain
   const tokens = useMemo(
-    () => getTokensForChain(chainId ?? fallbackChainId),
+    () => getTokensForChain(chainId ?? SUPPORTED_CHAIN_ID),
     [chainId]
   );
 
@@ -86,9 +88,9 @@ export const TokenBalanceSummary = ({
   let infoMessageText =
     'Browse available ammunition below and click "Purchase" to buy on Uniswap.';
 
-  if (!isSupportedNetwork(chainId ?? fallbackChainId)) {
+  if (!isSupportedChainId(chainId ?? SUPPORTED_CHAIN_ID)) {
     infoMessageText =
-      "Please switch to a supported network (e.g., Base, Sepolia) to browse ammunition.";
+      "Please switch to Sepolia to browse ammunition.";
   }
 
   return (
@@ -121,7 +123,7 @@ export const TokenBalanceSummary = ({
         </div>
       </div>
 
-      {Boolean(chainId && chainId !== sepolia.id) && (
+      {Boolean(chainId && !isSupportedChainId(chainId)) && (
         <Button variant="secondary" className="w-full text-center">
           <span>
             Stay tuned for mainnet launch! Until then, play on Sepolia.
@@ -244,13 +246,17 @@ export const TokenBalanceSummary = ({
                   <div className="flex gap-2">
                     <Button
                       variant="secondary"
-                      disabled={!hasBalance(token.address)}
+                      disabled={
+                        !isSupportedChainId(chainId) ||
+                        !hasBalance(token.address)
+                      }
                       onClick={() => onTokenAction(token, "ship")}
                     >
                       Ship
                     </Button>
                     <Button
                       variant="primary"
+                      disabled={!isSupportedChainId(chainId)}
                       onClick={() => onTokenAction(token, "purchase")}
                     >
                       Purchase

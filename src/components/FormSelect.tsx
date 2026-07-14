@@ -69,8 +69,8 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
 
     const sizeClasses = getSizeClasses();
 
-    // Generate a unique ID if one isn't provided
-    const selectId = id || `form-select-${React.useId()}`;
+    const generatedId = React.useId();
+    const selectId = id || `form-select-${generatedId}`;
 
     return (
       <div className={cn("flex flex-col", sizeClasses.wrapperGap)}>

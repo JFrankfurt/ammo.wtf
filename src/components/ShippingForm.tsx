@@ -1,247 +1,210 @@
 import {
+  CloseButton,
   Dialog,
   DialogPanel,
   DialogTitle,
   Transition,
   TransitionChild,
-  CloseButton,
 } from "@headlessui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Fragment, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { parseUnits } from "viem";
+import { useAccount } from "wagmi";
+import { getTokensForChain } from "@/addresses";
 import {
-  useAccount,
-  useWaitForTransactionReceipt,
-  useWriteContract,
-} from "wagmi";
-import { z } from "zod";
-import { default as ammoTokenABI } from "../abi/ammoTokenERC20";
-import { getTokensForChain } from "../addresses";
-import { getShipperPublicKey } from "../data/shipper-keys";
+  shippingSchema,
+  type ShippingData,
+} from "@/data/shipping-validation";
+import { useShippingRedemption } from "@/hooks/useShippingRedemption";
+import { useTokenBalances } from "@/hooks/useTokenBalances";
+import { buildCanonicalLineItems } from "@/utils/shippingRedemption";
 import {
-  encryptData,
-  encryptSymmetricKey,
-  generateSymmetricKey,
-} from "../data/shipping-encryption";
-import { shippingSchema } from "../data/shipping-validation";
-import { useTokenBalances } from "../hooks/useTokenBalances";
-import {
-  FormDataWithRequiredFields,
   ShippingFormAddress,
+  type FormDataWithRequiredFields,
 } from "./ShippingFormAddress";
 import { ShippingFormContents } from "./ShippingFormContents";
-import { SimpleTransactionStatus } from "./SimpleTransactionStatus";
+import { TransactionStatus } from "./TransactionStatus";
 
-export const ShippingForm = ({
+type FormStep = "contents" | "shipping";
+
+const REDEMPTION_MESSAGES = {
+  encrypting: "Encrypting shipping details…",
+  "reading-permits": "Reading token permit data…",
+  submitting: "Submitting one batch redemption…",
+  confirming: "Waiting for transaction confirmation…",
+  success: "Shipping redemption confirmed.",
+} as const;
+
+const DEFAULT_VALUES: FormDataWithRequiredFields = {
+  recipient: {
+    name: "",
+    email: "",
+    phone: undefined,
+  },
+  address: {
+    street1: "",
+    street2: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "US",
+  },
+  preferences: {
+    requireSignature: true,
+    insurance: false,
+    specialInstructions: "",
+  },
+  metadata: {
+    version: "1.0",
+    origin: "marketplace-v1",
+  },
+};
+
+export function ShippingForm({
   isOpen,
   onClose,
   address,
-  tokenAddress,
 }: {
   isOpen: boolean;
   onClose: () => void;
   address: `0x${string}`;
-  tokenAddress: `0x${string}`;
-}) => {
+}) {
   const { chainId } = useAccount();
-  const [step, setStep] = useState<"contents" | "shipping">("contents");
+  const [step, setStep] = useState<FormStep>("contents");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+  const redemption = useShippingRedemption();
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-    getValues,
-  } = useForm<FormDataWithRequiredFields>({
+  } = useForm<FormDataWithRequiredFields, unknown, ShippingData>({
     resolver: zodResolver(shippingSchema),
     mode: "onChange",
-    defaultValues: {
-      recipient: {
-        name: "",
-        email: "",
-        phone: undefined,
-      },
-      address: {
-        street1: "",
-        street2: undefined,
-        city: "",
-        state: "",
-        postalCode: "",
-        country: "US" as const,
-      },
-      preferences: {
-        requireSignature: true,
-        insurance: true,
-        specialInstructions: "",
-      },
-      metadata: {
-        version: "1.0" as const,
-        origin: "marketplace-v1",
-      },
-    },
+    defaultValues: DEFAULT_VALUES,
   });
 
-  // Get all tokens for the current chain
-  const allTokens = useMemo(() => {
-    return chainId ? getTokensForChain(chainId) : [];
-  }, [chainId]);
-
-  // Get token balances
+  const allTokens = useMemo(
+    () => (chainId ? getTokensForChain(chainId) : []),
+    [chainId]
+  );
   const { balances: tokenBalances, isLoading: balancesLoading } =
     useTokenBalances(allTokens, address);
+  const tokensWithBalance = useMemo(
+    () => allTokens.filter((token) => tokenBalances[token.address] > 0),
+    [allTokens, tokenBalances]
+  );
+  const hasSelectedQuantities = Object.values(quantities).some(
+    (quantity) => quantity > 0
+  );
+  const totalRounds = useMemo(
+    () =>
+      Object.entries(quantities).reduce((total, [tokenAddress, units]) => {
+        const token = allTokens.find(
+          (candidate) =>
+            candidate.address.toLowerCase() === tokenAddress.toLowerCase()
+        );
+        return total + units * (token?.product.roundsPerUnit ?? 0);
+      }, 0),
+    [allTokens, quantities]
+  );
+  const totalValueUsd = useMemo(
+    () =>
+      Object.entries(quantities).reduce((total, [tokenAddress, units]) => {
+        const token = allTokens.find(
+          (candidate) =>
+            candidate.address.toLowerCase() === tokenAddress.toLowerCase()
+        );
+        return token
+          ? total +
+              units *
+                token.product.roundsPerUnit *
+                token.product.estimatedValueUsdPerRound
+          : total;
+      }, 0),
+    [allTokens, quantities]
+  );
+  const isBusy = [
+    "encrypting",
+    "reading-permits",
+    "signing-permits",
+    "submitting",
+    "confirming",
+  ].includes(redemption.status);
+  const redemptionMessage =
+    redemption.status === "signing-permits"
+      ? `Signing exact permits: ${redemption.signedPermits} of ${redemption.totalPermits} complete…`
+      : REDEMPTION_MESSAGES[
+          redemption.status as keyof typeof REDEMPTION_MESSAGES
+        ];
+  const redemptionPresentationStatus =
+    redemption.status === "error"
+      ? "error"
+      : redemption.status === "success"
+        ? "success"
+        : redemption.status === "idle"
+          ? "idle"
+          : "pending";
 
-  // Filter tokens to only show those with balances
-  const tokensWithBalance = useMemo(() => {
-    return allTokens.filter((token) => tokenBalances[token.address] > 0);
-  }, [allTokens, tokenBalances]);
+  function resetDialog() {
+    reset(DEFAULT_VALUES);
+    redemption.reset();
+    setStep("contents");
+    setQuantities({});
+    setSelectionError(null);
+  }
 
-  // If a specific token address was provided, filter to just that token
-  const selectedTokens = useMemo(() => {
-    return tokenAddress &&
-      tokenAddress !== "0x0000000000000000000000000000000000000000"
-      ? allTokens.filter(
-          (token) => token.address.toLowerCase() === tokenAddress.toLowerCase()
-        )
-      : tokensWithBalance;
-  }, [tokenAddress, allTokens, tokensWithBalance]);
+  function closeDialog() {
+    if (isBusy) return;
+    resetDialog();
+    onClose();
+  }
 
-  const handleQuantityChange = (address: string, value: number) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [address]: value,
-    }));
-  };
-
-  const totalTokens = useMemo(() => {
-    return Object.entries(quantities).reduce(
-      (sum, [_address, qty]) => sum + qty * 250,
-      0
+  function handleQuantityChange(tokenAddress: string, value: number) {
+    const token = allTokens.find(
+      (candidate) =>
+        candidate.address.toLowerCase() === tokenAddress.toLowerCase()
     );
-  }, [quantities]);
+    const maximumUnits = token
+      ? Math.floor(
+          (tokenBalances[token.address] || 0) / token.product.roundsPerUnit
+        )
+      : 0;
+    const units = Number.isFinite(value)
+      ? Math.min(Math.max(Math.trunc(value), 0), maximumUnits)
+      : 0;
+    setQuantities((current) => ({ ...current, [tokenAddress]: units }));
+    setSelectionError(null);
+  }
 
-  const totalValueUsd = useMemo(() => {
-    return Object.entries(quantities).reduce((sum, [address, qty]) => {
-      const token = allTokens.find((t) => t.address === address);
-      return sum + 0.3 * qty * 250;
-    }, 0);
-  }, [quantities, allTokens]);
-
-  const hasSelectedQuantities = useMemo(() => {
-    return Object.values(quantities).some((qty) => qty > 0);
-  }, [quantities]);
-
-  const {
-    writeContract,
-    isError,
-    error: writeContractError,
-    data: hash,
-    isPending,
-  } = useWriteContract();
-
-  const { chain } = useAccount();
-
-  const onSubmit = async (data: z.infer<typeof shippingSchema>) => {
+  function continueToShipping() {
     try {
-      setIsSubmitting(true);
-      setError(null);
-
-      // Prepare shipping data
-      const shippingData = {
-        ...data,
-        metadata: {
-          version: "1.0",
-          origin: "marketplace-v1",
-        },
-        quantity: totalTokens,
-      };
-
-      const shipperPublicKey = await getShipperPublicKey();
-      const aesKey = await generateSymmetricKey();
-      const encryptedKeyData = await encryptSymmetricKey(
-        aesKey,
-        shipperPublicKey
-      );
-
-      // Encrypt shipping data
-      const { encryptedData, iv } = await encryptData(
-        JSON.stringify(shippingData),
-        aesKey
-      );
-
-      // Convert the encrypted package to a single bytes string
-      const encryptedPackageBytes = new Uint8Array([
-        ...iv,
-        ...encryptedData,
-        ...encryptedKeyData.ephemeralPubKey,
-        ...encryptedKeyData.encryptedSymmetricKey,
-      ]);
-
-      // Submit to blockchain
-      writeContract(
-        {
-          abi: ammoTokenABI,
-          address: tokenAddress,
-          functionName: "redeem",
-          args: [
-            address as `0x${string}`,
-            parseUnits(totalTokens.toString(), 18),
-            `0x${Buffer.from(encryptedPackageBytes).toString(
-              "hex"
-            )}` as `0x${string}`,
-          ],
-        },
-        {
-          onSettled: () => {
-            setIsSubmitting(false);
-          },
-        }
-      );
-
-      // Don't reset form here - wait for confirmation
+      buildCanonicalLineItems(allTokens, quantities);
+      setSelectionError(null);
+      setStep("shipping");
     } catch (error) {
-      console.error("Error submitting shipping form:", error);
-      setError(
-        error instanceof Error &&
-          (error.message.includes("User denied") ||
-            error.message.includes("user rejected"))
-          ? "Transaction was rejected. Please try again."
-          : "An error occurred while processing your request. Please try again."
+      setSelectionError(
+        error instanceof Error
+          ? error.message
+          : "Selected quantities are invalid."
       );
-      setIsSubmitting(false);
     }
-  };
+  }
 
-  const onError = (errors: any) => {
-    console.error("Form validation errors:", errors);
-  };
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-      query: {
-        enabled: !!hash,
-      },
-    });
+  async function submitShipping(data: ShippingData) {
+    try {
+      const lineItems = buildCanonicalLineItems(allTokens, quantities);
+      setSelectionError(null);
+      await redemption.redeem(data, lineItems);
+    } catch {
+      // The redemption hook stores a sanitized, user-facing error.
+    }
+  }
 
   return (
     <Transition show={isOpen} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-50"
-        onClose={() => {
-          if (!isSubmitting && !isConfirming) {
-            onClose();
-            reset();
-            setStep("contents");
-            setQuantities({});
-            setError(null);
-          }
-        }}
-      >
+      <Dialog as="div" className="relative z-50" onClose={closeDialog}>
         <TransitionChild as={Fragment}>
           <div
             className="fixed inset-0 bg-black/70 backdrop-blur-sm transition duration-300 data-[closed]:opacity-0"
@@ -249,22 +212,19 @@ export const ShippingForm = ({
           />
         </TransitionChild>
 
-        {/* Full screen container with scrolling */}
         <div className="fixed inset-0 flex flex-col items-center justify-start overflow-y-auto p-3 md:p-4 lg:p-6">
           <TransitionChild as={Fragment}>
-            <DialogPanel className="w-full max-w-md md:max-w-lg lg:max-w-xl transform overflow-auto rounded-none bg-background border border-border p-4 md:p-6 transition-all duration-300 ease-out data-[closed]:opacity-0 data-[closed]:scale-95 my-4 md:my-8">
-              <div className="flex justify-between items-center mb-4">
+            <DialogPanel className="my-4 w-full max-w-md transform overflow-auto rounded-none border border-border bg-background p-4 transition-all duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 md:my-8 md:max-w-lg md:p-6 lg:max-w-xl">
+              <div className="mb-4 flex items-center justify-between">
                 <DialogTitle
                   as="h3"
-                  className="text-lg font-mono font-bold text-accentGreen"
+                  className="font-mono text-lg font-bold text-accentGreen"
                 >
                   {step === "contents"
                     ? "Select Ammunition to Ship"
                     : "Shipping Information"}
                 </DialogTitle>
-
-                {/* Close button */}
-                {Boolean(!isSubmitting && !isConfirming) && (
+                {!isBusy && (
                   <CloseButton
                     type="button"
                     className="text-muted hover:text-foreground focus:outline-none"
@@ -287,40 +247,54 @@ export const ShippingForm = ({
                 )}
               </div>
 
-              <div className="mt-3 md:mt-4">
+              <div className="mt-3 space-y-4 md:mt-4">
+                {selectionError && (
+                  <div
+                    role="alert"
+                    className="border border-destructive bg-destructive/10 p-3 text-xs font-mono text-destructive"
+                  >
+                    {selectionError}
+                  </div>
+                )}
+
                 {step === "contents" ? (
                   <ShippingFormContents
-                    selectedTokens={selectedTokens}
+                    selectedTokens={tokensWithBalance}
                     quantities={quantities}
                     handleQuantityChange={handleQuantityChange}
-                    totalTokens={totalTokens}
+                    totalRounds={totalRounds}
                     totalValueUsd={totalValueUsd}
-                    onContinue={() => setStep("shipping")}
+                    onContinue={continueToShipping}
                     balancesLoading={balancesLoading}
                     tokenBalances={tokenBalances}
                     hasSelectedQuantities={hasSelectedQuantities}
+                    disabledReason={redemption.disabledReason}
                   />
                 ) : (
                   <form
-                    onSubmit={handleSubmit(onSubmit, onError)}
+                    onSubmit={handleSubmit(submitShipping)}
                     className="space-y-4"
                   >
                     <ShippingFormAddress
                       register={register}
                       errors={errors}
-                      isSubmitting={isSubmitting || isConfirming}
-                      onBack={() => setStep("contents")}
+                      isSubmitting={isBusy || redemption.status === "success"}
+                      onBack={() => {
+                        redemption.reset();
+                        setStep("contents");
+                      }}
                     />
-
-                    {/* Transaction Status */}
-                    <SimpleTransactionStatus
-                      isPending={isPending}
-                      isConfirming={isConfirming}
-                      isConfirmed={isConfirmed}
-                      isError={isError}
-                      error={error || (writeContractError?.message as string)}
-                      hash={hash}
-                      chainId={chain?.id}
+                    <TransactionStatus
+                      status={redemptionPresentationStatus}
+                      message={redemptionMessage}
+                      error={redemption.error}
+                      errorMessage={
+                        redemption.status === "error"
+                          ? redemption.error?.message
+                          : undefined
+                      }
+                      hash={redemption.txHash}
+                      chainId={chainId}
                     />
                   </form>
                 )}
@@ -331,4 +305,4 @@ export const ShippingForm = ({
       </Dialog>
     </Transition>
   );
-};
+}

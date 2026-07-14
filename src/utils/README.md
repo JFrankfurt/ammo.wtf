@@ -1,72 +1,28 @@
-# Utility Functions
+# Utilities
 
-## Wallet Error Handling
+Utility modules are pure domain and formatting code. Wallet/network orchestration belongs in hooks; reusable rendering belongs in components.
 
-The wallet error handling utilities provide a standardized way to handle and display errors from wallet interactions throughout the application.
+## Purchase
 
-### Components
+`purchaseSwap.ts` validates USDC amounts and fees, derives the configured Uniswap v4 pool, calculates slippage bounds, checks exact allowance readiness, and encodes Universal Router commands. It depends on runtime Uniswap SDK packages because encoding runs in the browser.
 
-- `WalletErrorDisplay`: A reusable component for displaying wallet errors in a user-friendly format.
-- `SimpleTransactionStatus`: Updated to use the new error handling utilities.
-- `TransactionStates`: Updated to use the new error handling utilities.
+## Shipping
 
-### Utilities
+`shippingRedemption.ts` canonicalizes selected inventory, converts units to exact token base amounts, serializes the encrypted payload, creates short-lived EIP-2612 typed data, and splits signatures for the batch-redeemer ABI.
 
-- `parseWalletError`: Parses a wallet error message into a more user-friendly format.
-- `formatWalletError`: Formats a wallet error for display in the UI.
+Do not add logs for shipping data, encrypted payloads, token permits, signatures, payment amounts, or complete wallet/provider errors.
 
-### Hooks
+## Wallet errors
 
-- `useWalletErrorHandler`: A hook for handling wallet errors in a standardized way across the application.
+`walletErrors.ts` maps recognized wallet and contract failures to bounded user-facing messages. Unknown provider objects and raw transaction requests are intentionally not serialized or exposed.
 
-### Usage
+`TransactionStatus` in `src/components` is the shared pending/success/error presentation for purchase, shipping, and admin operations.
 
-#### Using the WalletErrorDisplay component
+## Address and pricing helpers
 
-```tsx
-import { WalletErrorDisplay } from "../components/WalletErrorDisplay";
+- `address.ts` truncates display addresses.
+- `blockExplorer.ts` resolves links only from supported chain configuration.
+- `formatCurrency.ts` formats decimal display values.
+- `sqrtPricex96ToPrice.ts` converts Uniswap v4 slot data into token prices.
 
-// In your component
-return <div>{error && <WalletErrorDisplay error={error} />}</div>;
-```
-
-#### Using the useWalletErrorHandler hook
-
-```tsx
-import { useWalletErrorHandler } from '../hooks/useWalletErrorHandler';
-
-function MyComponent() {
-  const { error, isUserRejection, handleError, clearError } = useWalletErrorHandler();
-
-  const handleTransaction = async () => {
-    try {
-      // Attempt transaction
-      await walletClient.writeContract({...});
-    } catch (err) {
-      // Handle error
-      handleError(err);
-    }
-  };
-
-  return (
-    <div>
-      <button onClick={handleTransaction}>Submit Transaction</button>
-      {error && <WalletErrorDisplay error={error} />}
-      {isUserRejection && <p>You can try again when you're ready.</p>}
-    </div>
-  );
-}
-```
-
-### Error Types Handled
-
-The error handling utilities can identify and provide user-friendly messages for the following types of errors:
-
-1. User rejection errors (e.g., "User denied transaction signature")
-2. Insufficient funds errors
-3. Gas-related errors
-4. Nonce errors
-5. Contract execution errors
-6. MetaMask-specific errors
-
-For unrecognized errors, a generic message is displayed with the option to view more details.
+Run utility tests through `yarn test`; run static checks with `yarn lint` and `yarn typecheck`.

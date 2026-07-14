@@ -17,30 +17,78 @@ const postalCodeSchema = z
   .max(10)
   .regex(/^[A-Z0-9 -]*$/i, "Invalid postal code format");
 
-const RESTRICTED_STATES = [
-  "NY",
+export const RESTRICTED_STATE_CODES = [
+  "CA",
+  "CT",
   "IL",
   "MA",
   "NJ",
-  "CT",
-  "CA",
-  "NEW YORK",
-  "ILLINOIS",
-  "MASSACHUSETTS",
-  "NEW JERSEY",
-  "CONNECTICUT",
-  "CALIFORNIA",
-];
+  "NY",
+] as const;
+
+export const SHIPPING_STATE_CODES = [
+  "AL",
+  "AZ",
+  "AR",
+  "CO",
+  "DE",
+  "FL",
+  "GA",
+  "ID",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NM",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY",
+] as const;
+
+export const SHIPPING_STATE_OPTIONS = SHIPPING_STATE_CODES.map((state) => ({
+  value: state,
+  label: state,
+}));
 
 const stateSchema = z
   .string()
-  .min(1)
-  .max(100)
   .transform((state) => state.toUpperCase().trim())
-  .refine((state) => !RESTRICTED_STATES.includes(state), {
-    message:
-      "We cannot ship to NY, IL, MA, NJ, CT, or CA due to regulatory restrictions",
-  });
+  .refine(
+    (state): state is (typeof SHIPPING_STATE_CODES)[number] =>
+      SHIPPING_STATE_CODES.includes(
+        state as (typeof SHIPPING_STATE_CODES)[number]
+      ),
+    {
+      message:
+        "Select an eligible state. Shipping is unavailable in CA, CT, IL, MA, NJ, and NY.",
+    }
+  );
 
 // Main shipping information schema
 export const shippingSchema = z.object({
@@ -75,30 +123,4 @@ export const shippingSchema = z.object({
   }),
 });
 
-type ShippingData = z.infer<typeof shippingSchema>;
-
-// Example usage
-export const exampleShippingData: ShippingData = {
-  recipient: {
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1234567890",
-  },
-  address: {
-    street1: "123 Main St",
-    street2: "Apt 4B",
-    city: "Anytown",
-    state: "State",
-    postalCode: "12345",
-    country: "US",
-  },
-  preferences: {
-    requireSignature: true,
-    insurance: true,
-    specialInstructions: "Please leave with doorman",
-  },
-  metadata: {
-    version: "1.0",
-    origin: "marketplace-v2",
-  },
-};
+export type ShippingData = z.infer<typeof shippingSchema>;
