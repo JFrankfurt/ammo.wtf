@@ -59,6 +59,22 @@ export const PurchaseDialog = ({
     await purchase.executePurchase().catch(() => undefined);
   };
 
+  const isTransactionPending =
+    purchase.status === "approving-erc20" ||
+    purchase.status === "approving-permit2" ||
+    purchase.status === "swapping";
+
+  const disabledReasonText =
+    purchase.disabledReason === "Insufficient USDC balance."
+      ? `Insufficient balance: purchase requires ${purchase.amounts.total} USDC.`
+      : purchase.disabledReason === "Switch to Sepolia to purchase."
+        ? "Purchases support Sepolia only. Switch networks in your wallet."
+        : purchase.disabledReason === "Enter a purchase amount." ||
+            purchase.disabledReason === "Waiting for quote." ||
+            purchase.disabledReason === "Transaction in progress."
+          ? null // transient/self-evident states covered by button label + status line
+          : purchase.disabledReason;
+
   const statusMessage: Partial<Record<typeof purchase.status, string>> = {
     quoting: "Fetching exact-input quote…",
     "approving-erc20": "Approving exact USDC amount for Permit2…",
@@ -119,11 +135,6 @@ export const PurchaseDialog = ({
 
               <div className="flex flex-col w-full space-y-3">
                 <p className="text-xs text-muted w-full">{tokenName}</p>
-                {isConnected && purchase.disabledReason?.includes("Sepolia") && (
-                  <p className="text-xs text-accentRed">
-                    Purchases support Sepolia only. Base is not supported.
-                  </p>
-                )}
 
                 <div className="w-full space-y-3">
                   <div className="relative">
@@ -148,6 +159,7 @@ export const PurchaseDialog = ({
                       type="number"
                       value={amount}
                       onChange={handleAmountChange}
+                      disabled={isTransactionPending}
                       placeholder="0.00"
                       min="0"
                       step="0.01"
@@ -168,11 +180,9 @@ export const PurchaseDialog = ({
                     currencySymbol="USDC"
                   />
 
-                  {purchase.disabledReason ===
-                    "Insufficient USDC balance." && (
+                  {isConnected && disabledReasonText && (
                     <p className="text-xs text-accentRed">
-                      Insufficient balance: purchase requires{" "}
-                      {purchase.amounts.total} USDC.
+                      {disabledReasonText}
                     </p>
                   )}
 

@@ -10,7 +10,7 @@ import {
 describe("chain configuration", () => {
   it("returns the typed Sepolia configuration", () => {
     expect(getChainConfig(sepolia.id)).toBe(SEPOLIA_CONFIG);
-    expect(getTokensForChain(sepolia.id)).toHaveLength(3);
+    expect(getTokensForChain(sepolia.id)).toHaveLength(2);
   });
 
   it("wires the deployed Sepolia batch redeemer address", () => {

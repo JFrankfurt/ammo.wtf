@@ -146,9 +146,14 @@ const ConnectedAccountTokenInfo = () => {
       )}
     >
       <div className="space-y-2">
-        {/* Wrap lazy-loaded components in Suspense with a fallback. */}
-        {/* Consider a more visually appealing fallback (e.g., a simple spinner) */}
-        <Suspense fallback={<div>Loading...</div>}>
+        {/* Wrap lazy-loaded components in Suspense with a themed fallback. */}
+        <Suspense
+          fallback={
+            <div className="p-2 text-center font-mono text-xs text-accentGreen animate-pulse">
+              Loading…
+            </div>
+          }
+        >
           {isSelectorOpen && (
             <TokenSelectorDialog
               isOpen={isSelectorOpen}
@@ -201,11 +206,16 @@ const ConnectedAccountTokenInfo = () => {
               </h2>
               {/* Display USDC balance */}
               <div className="font-mono">
-                {/* Consider showing a loading state while isLoadingUsdcBalance is true */}
-                <span className="font-medium text-accentGreen">
-                  ${formattedUsdcBalance}
-                </span>{" "}
-                USDC
+                {isLoadingUsdcBalance ? (
+                  <span className="animate-pulse text-muted">Loading…</span>
+                ) : (
+                  <>
+                    <span className="font-medium text-accentGreen">
+                      ${formattedUsdcBalance}
+                    </span>{" "}
+                    USDC
+                  </>
+                )}
               </div>
             </div>
             {/* Expand/Collapse Icon Button */}
@@ -216,9 +226,12 @@ const ConnectedAccountTokenInfo = () => {
                 "transition-colors focus:outline-none focus:ring-1 focus:ring-ring"
               )}
               aria-label={isExpanded ? "Collapse panel" : "Expand panel"}
-              // No onClick needed here as the parent div handles it.
-              // Ensure this button doesn't interfere if it were focusable and space/enter was pressed.
-              // Adding type="button" can be good practice.
+              aria-expanded={isExpanded}
+              // stopPropagation so the parent div's onClick doesn't toggle twice.
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpand();
+              }}
               type="button"
             >
               <svg

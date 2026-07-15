@@ -250,6 +250,13 @@ export const TokenBalanceSummary = ({
                         !isSupportedChainId(chainId) ||
                         !hasBalance(token.address)
                       }
+                      title={
+                        !isSupportedChainId(chainId)
+                          ? "Switch to Sepolia to ship."
+                          : !hasBalance(token.address)
+                            ? "Purchase this ammunition first to ship it."
+                            : undefined
+                      }
                       onClick={() => onTokenAction(token, "ship")}
                     >
                       Ship
@@ -257,6 +264,11 @@ export const TokenBalanceSummary = ({
                     <Button
                       variant="primary"
                       disabled={!isSupportedChainId(chainId)}
+                      title={
+                        !isSupportedChainId(chainId)
+                          ? "Switch to Sepolia to purchase."
+                          : undefined
+                      }
                       onClick={() => onTokenAction(token, "purchase")}
                     >
                       Purchase

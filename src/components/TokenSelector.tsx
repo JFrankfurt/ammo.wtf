@@ -155,9 +155,10 @@ export const TokenSelector = ({
         <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
           {filteredTokens.map((token) => (
             // List item - themed
-            <div
+            <button
               key={token.address}
-              className="border border-border rounded-none p-3 hover:bg-muted/20 bg-muted/10 transition-all cursor-pointer"
+              type="button"
+              className="w-full text-left border border-border rounded-none p-3 hover:bg-muted/20 bg-muted/10 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
               onClick={() =>
                 onSelectToken({
                   ...token,
@@ -220,7 +221,7 @@ export const TokenSelector = ({
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

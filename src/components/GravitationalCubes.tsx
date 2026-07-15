@@ -130,7 +130,7 @@ const initialObject = {
 } as SpawnedObject;
 
 function Scene() {
-  const { camera, size } = useThree();
+  const { camera, size, gl } = useThree();
   const [objects, setObjects] = useState<SpawnedObject[]>([initialObject]);
 
   const center = new Vector3(0, 0, 0);
@@ -158,6 +158,10 @@ function Scene() {
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
+      // Only spawn on background clicks — the canvas sits behind all UI, so
+      // clicks on dialogs, forms, and buttons land on DOM elements instead.
+      if (e.target !== gl.domElement) return;
+
       // Convert mouse position to normalized device coordinates (-1 to +1)
       const mouse = new Vector2(
         (e.clientX / size.width) * 2 - 1,
@@ -193,7 +197,7 @@ function Scene() {
         return prev;
       });
     },
-    [camera, size.height, size.width]
+    [camera, gl.domElement, size.height, size.width]
   );
 
   React.useEffect(() => {

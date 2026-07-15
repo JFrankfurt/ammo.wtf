@@ -2,6 +2,7 @@ import React, { FC, Suspense, lazy } from "react";
 import ConnectedAccountTokenInfo from "@/components/ConnectedAccountTokenInfo";
 // import GravitationalCubes from "@/components/GravitationalCubes"; // Remove static import
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/utils/cn";
 
 // Dynamically import components
@@ -20,9 +21,12 @@ const HomePage: FC = () => {
       </div>
 
       {/* Dynamically loaded components */}
-      <Suspense fallback={null}>
-        <GravitationalCubes />
-      </Suspense>
+      {/* The 3D scene is decorative — a WebGL failure shouldn't take down the app. */}
+      <ErrorBoundary fallback={null}>
+        <Suspense fallback={null}>
+          <GravitationalCubes />
+        </Suspense>
+      </ErrorBoundary>
       <Suspense fallback={null}>
         <AdminPanel />
       </Suspense>

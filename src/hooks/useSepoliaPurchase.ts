@@ -189,7 +189,18 @@ export function useSepoliaPurchase({
   });
 
   useEffect(() => {
-    setOperation({ status: "idle", error: null, txHash: null });
+    setOperation((prev) => {
+      // Never wipe status while a transaction is in flight — the debounced
+      // amount input can change mid-approval and the tx is still on-chain.
+      if (
+        prev.status === "approving-erc20" ||
+        prev.status === "approving-permit2" ||
+        prev.status === "swapping"
+      ) {
+        return prev;
+      }
+      return { status: "idle", error: null, txHash: null };
+    });
   }, [subtotalInput, tokenOut, slippageBps]);
 
   const waitForSuccess = useCallback(

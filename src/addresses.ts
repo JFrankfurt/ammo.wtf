@@ -75,16 +75,6 @@ const SEPOLIA_TOKENS = [
     weight: 147,
     manufacturer: "Federal",
   },
-  {
-    address: "0x0d6cc84a4d6846b0e537d61051e12c7847a633a2",
-    name: "Estevan's Jello Rounds",
-    symbol: "JELLO",
-    product: AMMO_PRODUCT_METADATA,
-    category: "pistol",
-    caliber: "9mm",
-    description: "extra tasty",
-    weight: 220,
-  },
 ] as const satisfies readonly TokenInfo[];
 
 export const SEPOLIA_CONFIG = {
