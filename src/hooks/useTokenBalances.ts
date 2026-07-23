@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useReadContracts } from "wagmi";
 import ammoTokenAbi from "../abi/ammoToken";
-import { SEPOLIA_CONFIG, type TokenInfo } from "../addresses";
+import type { TokenInfo } from "../addresses";
 
 
 interface TokensBalances {
@@ -53,7 +53,7 @@ export function useTokenBalances(
         const tokenAddress = tokens[index].address;
         newBalances[tokenAddress] =
           Number(result.result) /
-          Math.pow(10, SEPOLIA_CONFIG.decimals.ammoToken);
+          Math.pow(10, tokens[index].product.decimals);
       }
     });
 

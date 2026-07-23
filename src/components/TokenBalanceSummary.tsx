@@ -1,7 +1,7 @@
 import {
+  DEFAULT_CHAIN_ID,
   getTokensForChain,
   isSupportedChainId,
-  SUPPORTED_CHAIN_ID,
   type TokenInfo,
 } from "@/addresses";
 import { TokenPriceDisplay } from "@/components/TokenPriceDisplay";
@@ -27,7 +27,7 @@ export const TokenBalanceSummary = ({
 
   // Get all tokens for the current chain
   const tokens = useMemo(
-    () => getTokensForChain(chainId ?? SUPPORTED_CHAIN_ID),
+    () => getTokensForChain(chainId ?? DEFAULT_CHAIN_ID),
     [chainId]
   );
 
@@ -88,9 +88,9 @@ export const TokenBalanceSummary = ({
   let infoMessageText =
     'Browse available ammunition below and click "Purchase" to buy on Uniswap.';
 
-  if (!isSupportedChainId(chainId ?? SUPPORTED_CHAIN_ID)) {
+  if (!isSupportedChainId(chainId ?? DEFAULT_CHAIN_ID)) {
     infoMessageText =
-      "Please switch to Sepolia to browse ammunition.";
+      "Please switch to a supported network to browse ammunition.";
   }
 
   return (
@@ -126,7 +126,7 @@ export const TokenBalanceSummary = ({
       {Boolean(chainId && !isSupportedChainId(chainId)) && (
         <Button variant="secondary" className="w-full text-center">
           <span>
-            Stay tuned for mainnet launch! Until then, play on Sepolia.
+            Unsupported network. Switch to Sepolia or Base in your wallet.
           </span>
         </Button>
       )}
@@ -252,7 +252,7 @@ export const TokenBalanceSummary = ({
                       }
                       title={
                         !isSupportedChainId(chainId)
-                          ? "Switch to Sepolia to ship."
+                          ? "Switch to a supported network to ship."
                           : !hasBalance(token.address)
                             ? "Purchase this ammunition first to ship it."
                             : undefined
@@ -266,7 +266,7 @@ export const TokenBalanceSummary = ({
                       disabled={!isSupportedChainId(chainId)}
                       title={
                         !isSupportedChainId(chainId)
-                          ? "Switch to Sepolia to purchase."
+                          ? "Switch to a supported network to purchase."
                           : undefined
                       }
                       onClick={() => onTokenAction(token, "purchase")}

@@ -1,13 +1,15 @@
 import { decodeAbiParameters } from "viem";
 import { SEPOLIA_CONFIG } from "@/addresses";
 import {
+  buildPermit2TypedData,
   calculateMinimumOutput,
   calculatePurchaseAmounts,
   deriveV4PoolConfig,
   encodeV4ExactInputSingle,
   getPurchaseDisabledReason,
-  needsExactErc20Allowance,
-  needsExactPermit2Allowance,
+  needsErc20Allowance,
+  needsPermit2Signature,
+  type Permit2Single,
   type PurchaseReadiness,
 } from "@/utils/purchaseSwap";
 
@@ -132,6 +134,68 @@ describe("V4 pool and command encoding", () => {
     expect(swap.amountIn).toBe(1_100_000n);
     expect(swap.amountOutMinimum).toBe(95n);
   });
+
+  it("prepends PERMIT2_PERMIT command when a signed permit is provided", () => {
+    const pool = deriveV4PoolConfig({
+      chainId: SEPOLIA_CONFIG.chainId,
+      tokenIn: SEPOLIA_CONFIG.contracts.usdc,
+      tokenOut: outputToken,
+      tokenInDecimals: SEPOLIA_CONFIG.decimals.usdc,
+      tokenOutDecimals: SEPOLIA_CONFIG.decimals.ammoToken,
+      ...SEPOLIA_CONFIG.pool,
+    });
+    const permitSingle: Permit2Single = {
+      details: {
+        token: SEPOLIA_CONFIG.contracts.usdc,
+        amount: 1_100_000n,
+        expiration: 2_000,
+        nonce: 7,
+      },
+      spender: SEPOLIA_CONFIG.contracts.universalRouter,
+      sigDeadline: 1_500n,
+    };
+    const signature = `0x${"ab".repeat(65)}` as const;
+    const encoded = encodeV4ExactInputSingle({
+      pool,
+      amountIn: 1_100_000n,
+      amountOutMinimum: 95n,
+      permit: { permitSingle, signature },
+    });
+
+    expect(encoded.commands).toBe("0x0a10");
+    expect(encoded.inputs).toHaveLength(2);
+    const [decodedPermit, decodedSignature] = decodeAbiParameters(
+      [
+        {
+          type: "tuple",
+          components: [
+            {
+              name: "details",
+              type: "tuple",
+              components: [
+                { name: "token", type: "address" },
+                { name: "amount", type: "uint160" },
+                { name: "expiration", type: "uint48" },
+                { name: "nonce", type: "uint48" },
+              ],
+            },
+            { name: "spender", type: "address" },
+            { name: "sigDeadline", type: "uint256" },
+          ],
+        },
+        { type: "bytes" },
+      ],
+      encoded.inputs[0]
+    );
+    expect(decodedPermit.details.token.toLowerCase()).toBe(
+      SEPOLIA_CONFIG.contracts.usdc.toLowerCase()
+    );
+    expect(decodedPermit.details.amount).toBe(1_100_000n);
+    expect(decodedPermit.details.expiration).toBe(2_000);
+    expect(decodedPermit.details.nonce).toBe(7);
+    expect(decodedPermit.sigDeadline).toBe(1_500n);
+    expect(decodedSignature).toBe(signature);
+  });
 });
 
 describe("purchase readiness", () => {
@@ -142,14 +206,17 @@ describe("purchase readiness", () => {
   });
 
   it.each([
-    [{ isSupportedChain: false }, "Switch to Sepolia to purchase."],
+    [
+      { isSupportedChain: false },
+      "Switch to a supported network to purchase.",
+    ],
     [{ hasAmount: false }, "Enter a purchase amount."],
     [{ isQuoting: true }, "Waiting for quote."],
     [{ hasQuoteError: true }, "Quote unavailable."],
     [{ hasQuote: false }, "Waiting for quote."],
     [{ hasSufficientBalance: false }, "Insufficient USDC balance."],
     [{ status: "approving-erc20" }, "Transaction in progress."],
-    [{ status: "approving-permit2" }, "Transaction in progress."],
+    [{ status: "signing-permit" }, "Transaction in progress."],
     [{ status: "swapping" }, "Transaction in progress."],
   ] as const)("disables for %o", (overrides, expected) => {
     expect(
@@ -158,16 +225,16 @@ describe("purchase readiness", () => {
   });
 });
 
-describe("exact authorization policy", () => {
-  it("requires ERC20 approval unless allowance exactly matches input", () => {
-    expect(needsExactErc20Allowance(11n, 11n)).toBe(false);
-    expect(needsExactErc20Allowance(10n, 11n)).toBe(true);
-    expect(needsExactErc20Allowance(12n, 11n)).toBe(true);
+describe("authorization policy", () => {
+  it("requires ERC20 approval only when allowance is insufficient", () => {
+    expect(needsErc20Allowance(11n, 11n)).toBe(false);
+    expect(needsErc20Allowance(12n, 11n)).toBe(false);
+    expect(needsErc20Allowance(10n, 11n)).toBe(true);
   });
 
-  it("requires exact, sufficiently long Permit2 allowance", () => {
+  it("requires Permit2 signature when allowance is short or expiring", () => {
     expect(
-      needsExactPermit2Allowance({
+      needsPermit2Signature({
         currentAllowance: 11n,
         currentExpiration: 2_000,
         requiredAmount: 11n,
@@ -175,20 +242,54 @@ describe("exact authorization policy", () => {
       })
     ).toBe(false);
     expect(
-      needsExactPermit2Allowance({
+      needsPermit2Signature({
         currentAllowance: 12n,
+        currentExpiration: 2_000,
+        requiredAmount: 11n,
+        minimumExpiration: 1_500,
+      })
+    ).toBe(false);
+    expect(
+      needsPermit2Signature({
+        currentAllowance: 10n,
         currentExpiration: 2_000,
         requiredAmount: 11n,
         minimumExpiration: 1_500,
       })
     ).toBe(true);
     expect(
-      needsExactPermit2Allowance({
+      needsPermit2Signature({
         currentAllowance: 11n,
         currentExpiration: 1_499,
         requiredAmount: 11n,
         minimumExpiration: 1_500,
       })
     ).toBe(true);
+  });
+
+  it("builds Permit2 typed data against the Permit2 domain", () => {
+    const permit: Permit2Single = {
+      details: {
+        token: SEPOLIA_CONFIG.contracts.usdc,
+        amount: 110n,
+        expiration: 2_000,
+        nonce: 3,
+      },
+      spender: SEPOLIA_CONFIG.contracts.universalRouter,
+      sigDeadline: 1_500n,
+    };
+    const typedData = buildPermit2TypedData({
+      chainId: SEPOLIA_CONFIG.chainId,
+      permit2: SEPOLIA_CONFIG.contracts.permit2,
+      permit,
+    });
+
+    expect(typedData.domain).toEqual({
+      name: "Permit2",
+      chainId: SEPOLIA_CONFIG.chainId,
+      verifyingContract: SEPOLIA_CONFIG.contracts.permit2,
+    });
+    expect(typedData.primaryType).toBe("PermitSingle");
+    expect(typedData.message).toBe(permit);
   });
 });

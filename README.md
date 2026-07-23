@@ -1,8 +1,9 @@
 # ammo.wtf
 
 React storefront for purchasing tokenized ammunition and redeeming token
-balances for shipment. The current application and contract configuration are
-Sepolia-only.
+balances for shipment. Sepolia and Base are supported chains; the app
+contracts are live on Sepolia, while Base stays feature-disabled until its
+contracts and pools are deployed.
 
 ## Architecture
 
@@ -10,7 +11,7 @@ Sepolia-only.
 - wagmi, viem, RainbowKit, and TanStack Query provide wallet and chain access.
 - `src/addresses.ts` is the source of truth for supported chains, deployed
   addresses, token metadata, decimals, and Uniswap v4 pool parameters.
-- `src/hooks/useSepoliaPurchase.ts` owns quote, allowance, swap, receipt, and
+- `src/hooks/usePurchase.ts` owns quote, allowance, swap, receipt, and
   balance-refresh behavior for purchases.
 - `src/hooks/useShippingRedemption.ts` owns payload encryption, EIP-2612 permit
   signing, batch redemption, and receipt handling for shipping.
@@ -39,21 +40,34 @@ yarn dev
 Vite serves the app locally. No production deployment is required for local
 development.
 
-## Sepolia configuration
+## Chain configuration
 
-Only Sepolia (`11155111`) is enabled. Reads and writes must resolve through
-`src/addresses.ts`; unsupported chains are rejected before transaction
-submission. Update that file after a verified deployment rather than
-scattering addresses through components.
+Sepolia (`11155111`) and Base (`8453`) are enabled. Reads and writes must
+resolve through `src/addresses.ts`; unsupported chains are rejected before
+transaction submission. Update that file after a verified deployment rather
+than scattering addresses through components.
 
-`ammoBatchRedeemer` is intentionally optional. Shipping stays disabled until a
-verified redeemer address is configured. Purchase also depends on configured
-USDC, Permit2, Universal Router, v4 Quoter, PoolManager, StateView, and pool
-parameters.
+`ammoFactory` and `ammoBatchRedeemer` are intentionally optional per chain.
+Shipping stays disabled until a verified redeemer address is configured, and
+admin factory writes fail with a clear error where the factory is undeployed.
+Purchase also depends on configured USDC, Permit2, Universal Router, v4
+Quoter, PoolManager, StateView, and pool parameters.
+
+Base launch checklist (`TODO(base-launch)` markers in `src/addresses.ts`):
+
+1. Deploy and verify the factory, tokens, and batch redeemer from
+   `ammo.wtf-contracts` on Base.
+2. Create and seed the Uniswap v4 USDC/token pools.
+3. Fill in `BASE_CONFIG` contract addresses and the Base token list.
+4. Flip `DEFAULT_CHAIN_ID` to `base.id` and list Base first in `src/wagmi.ts`.
+
+Set `VITE_BASE_RPC_URL` in `.env.local` for a dedicated Base RPC provider;
+the app falls back to the public RPC when unset. Never commit RPC URLs with
+embedded credentials.
 
 ## Purchase flow
 
-Purchases use an exact-input Sepolia Uniswap v4 swap:
+Purchases use an exact-input Uniswap v4 swap on the connected chain:
 
 1. Parse USDC subtotal and add the configured 10% purchase fee.
 2. Quote total USDC input against the configured v4 pool.
@@ -75,7 +89,8 @@ transaction. Permit signatures and plaintext shipping details must never be
 logged. The hook exposes only sanitized user-facing failures.
 
 The encrypted payload has a contract-size limit. Shipping availability also
-requires a configured batch redeemer and Sepolia public client.
+requires a configured batch redeemer and a public client for the connected
+chain.
 
 ## ABI generation
 
@@ -113,6 +128,6 @@ locally. `yarn deploy` publishes `dist/` through `gh-pages` and does not deploy
 contracts.
 
 Deploy and verify contracts from `ammo.wtf-contracts`, regenerate ABIs, then
-update verified Sepolia addresses before building this frontend. Never commit
+update verified chain addresses before building this frontend. Never commit
 private keys, RPC credentials, wallet secrets, permit signatures, or plaintext
 shipping data.

@@ -40,12 +40,23 @@ export interface EncodedV4Swap {
   inputs: readonly Hex[];
 }
 
+export interface Permit2Single {
+  details: {
+    token: Address;
+    amount: bigint;
+    expiration: number;
+    nonce: number;
+  };
+  spender: Address;
+  sigDeadline: bigint;
+}
+
 export type PurchaseStatus =
   | "idle"
   | "quoting"
   | "ready"
   | "approving-erc20"
-  | "approving-permit2"
+  | "signing-permit"
   | "swapping"
   | "success"
   | "error";
@@ -165,14 +176,49 @@ export function calculateMinimumOutput(
   );
 }
 
+export function buildPermit2TypedData({
+  chainId,
+  permit2,
+  permit,
+}: {
+  chainId: number;
+  permit2: Address;
+  permit: Permit2Single;
+}) {
+  return {
+    domain: {
+      name: "Permit2",
+      chainId,
+      verifyingContract: permit2,
+    },
+    types: {
+      PermitDetails: [
+        { name: "token", type: "address" },
+        { name: "amount", type: "uint160" },
+        { name: "expiration", type: "uint48" },
+        { name: "nonce", type: "uint48" },
+      ],
+      PermitSingle: [
+        { name: "details", type: "PermitDetails" },
+        { name: "spender", type: "address" },
+        { name: "sigDeadline", type: "uint256" },
+      ],
+    },
+    primaryType: "PermitSingle",
+    message: permit,
+  } as const;
+}
+
 export function encodeV4ExactInputSingle({
   pool,
   amountIn,
   amountOutMinimum,
+  permit,
 }: {
   pool: V4PoolConfig;
   amountIn: bigint;
   amountOutMinimum: bigint;
+  permit?: { permitSingle: Permit2Single; signature: Hex };
 }): EncodedV4Swap {
   if (amountIn <= 0n || amountIn > MAX_UINT128) {
     throw new Error("Swap input must fit in uint128 and be greater than zero.");
@@ -201,6 +247,22 @@ export function encodeV4ExactInputSingle({
   ]);
 
   const routePlanner = new RoutePlanner();
+  if (permit) {
+    // The router-sdk encodes with ethers v5, which rejects bigint fields.
+    routePlanner.addCommand(CommandType.PERMIT2_PERMIT, [
+      {
+        details: {
+          token: permit.permitSingle.details.token,
+          amount: permit.permitSingle.details.amount.toString(),
+          expiration: permit.permitSingle.details.expiration,
+          nonce: permit.permitSingle.details.nonce,
+        },
+        spender: permit.permitSingle.spender,
+        sigDeadline: permit.permitSingle.sigDeadline.toString(),
+      },
+      permit.signature,
+    ]);
+  }
   routePlanner.addCommand(CommandType.V4_SWAP, [v4Planner.finalize()]);
 
   return {
@@ -215,14 +277,14 @@ export function assertPermit2Amount(amount: bigint): void {
   }
 }
 
-export function needsExactErc20Allowance(
+export function needsErc20Allowance(
   currentAllowance: bigint,
   requiredAmount: bigint
 ): boolean {
-  return currentAllowance !== requiredAmount;
+  return currentAllowance < requiredAmount;
 }
 
-export function needsExactPermit2Allowance({
+export function needsPermit2Signature({
   currentAllowance,
   currentExpiration,
   requiredAmount,
@@ -234,7 +296,7 @@ export function needsExactPermit2Allowance({
   minimumExpiration: number;
 }): boolean {
   return (
-    currentAllowance !== requiredAmount ||
+    currentAllowance < requiredAmount ||
     currentExpiration < minimumExpiration
   );
 }
@@ -250,7 +312,7 @@ export function getPurchaseDisabledReason({
   status,
 }: PurchaseReadiness): string | null {
   if (!isConnected) return null;
-  if (!isSupportedChain) return "Switch to Sepolia to purchase.";
+  if (!isSupportedChain) return "Switch to a supported network to purchase.";
   if (!hasAmount) return "Enter a purchase amount.";
   if (isQuoting) return "Waiting for quote.";
   if (hasQuoteError) return "Quote unavailable.";
@@ -258,7 +320,7 @@ export function getPurchaseDisabledReason({
   if (!hasSufficientBalance) return "Insufficient USDC balance.";
   if (
     status === "approving-erc20" ||
-    status === "approving-permit2" ||
+    status === "signing-permit" ||
     status === "swapping"
   ) {
     return "Transaction in progress.";

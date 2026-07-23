@@ -15,7 +15,7 @@ import { Button } from "./Button";
 import { OrderSummary } from "./OrderSummary";
 import { TransactionStatus } from "./TransactionStatus";
 import { useDebounceValue } from "usehooks-ts";
-import { useSepoliaPurchase } from "@/hooks/useSepoliaPurchase";
+import { usePurchase } from "@/hooks/usePurchase";
 
 interface PurchaseDialogProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ export const PurchaseDialog = ({
   const { openConnectModal } = useConnectModal();
   const [amount, setAmount] = useState("");
   const [debouncedAmount] = useDebounceValue(amount, 500);
-  const purchase = useSepoliaPurchase({
+  const purchase = usePurchase({
     subtotalInput: debouncedAmount,
     tokenOut: tokenAddress,
     slippageBps: SLIPPAGE_BPS,
@@ -61,14 +61,14 @@ export const PurchaseDialog = ({
 
   const isTransactionPending =
     purchase.status === "approving-erc20" ||
-    purchase.status === "approving-permit2" ||
+    purchase.status === "signing-permit" ||
     purchase.status === "swapping";
 
   const disabledReasonText =
     purchase.disabledReason === "Insufficient USDC balance."
       ? `Insufficient balance: purchase requires ${purchase.amounts.total} USDC.`
-      : purchase.disabledReason === "Switch to Sepolia to purchase."
-        ? "Purchases support Sepolia only. Switch networks in your wallet."
+      : purchase.disabledReason === "Switch to a supported network to purchase."
+        ? "Purchases are not supported on this network. Switch networks in your wallet."
         : purchase.disabledReason === "Enter a purchase amount." ||
             purchase.disabledReason === "Waiting for quote." ||
             purchase.disabledReason === "Transaction in progress."
@@ -77,9 +77,8 @@ export const PurchaseDialog = ({
 
   const statusMessage: Partial<Record<typeof purchase.status, string>> = {
     quoting: "Fetching exact-input quote…",
-    "approving-erc20": "Approving exact USDC amount for Permit2…",
-    "approving-permit2":
-      "Approving exact Permit2 amount for Universal Router…",
+    "approving-erc20": "Approving USDC for Permit2 (one-time setup)…",
+    "signing-permit": "Sign the Permit2 authorization in your wallet…",
     swapping: "Submitting swap and waiting for confirmation…",
     success: "Purchase confirmed.",
   };
@@ -227,7 +226,7 @@ export const PurchaseDialog = ({
                     {!isConnected
                       ? "Connect Wallet"
                       : purchase.status === "approving-erc20" ||
-                        purchase.status === "approving-permit2"
+                        purchase.status === "signing-permit"
                       ? "Awaiting Approval"
                       : purchase.status === "swapping"
                       ? "Completing Purchase"

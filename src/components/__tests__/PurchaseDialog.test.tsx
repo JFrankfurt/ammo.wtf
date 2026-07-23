@@ -5,7 +5,7 @@ import { SEPOLIA_CONFIG } from "@/addresses";
 const mocks = vi.hoisted(() => ({
   useAccount: vi.fn(),
   openConnectModal: vi.fn(),
-  useSepoliaPurchase: vi.fn(),
+  usePurchase: vi.fn(),
 }));
 
 vi.mock("wagmi", () => ({
@@ -16,8 +16,8 @@ vi.mock("@rainbow-me/rainbowkit", () => ({
   useConnectModal: () => ({ openConnectModal: mocks.openConnectModal }),
 }));
 
-vi.mock("@/hooks/useSepoliaPurchase", () => ({
-  useSepoliaPurchase: mocks.useSepoliaPurchase,
+vi.mock("@/hooks/usePurchase", () => ({
+  usePurchase: mocks.usePurchase,
 }));
 
 function purchaseState(
@@ -66,7 +66,7 @@ describe("PurchaseDialog", () => {
       isConnected: true,
       chainId: SEPOLIA_CONFIG.chainId,
     });
-    mocks.useSepoliaPurchase.mockReturnValue(purchaseState());
+    mocks.usePurchase.mockReturnValue(purchaseState());
   });
 
   it("keeps Connect Wallet enabled and opens the connector", () => {
@@ -74,7 +74,7 @@ describe("PurchaseDialog", () => {
       isConnected: false,
       chainId: undefined,
     });
-    mocks.useSepoliaPurchase.mockReturnValue(
+    mocks.usePurchase.mockReturnValue(
       purchaseState({ canPurchase: true })
     );
     renderDialog();
@@ -86,7 +86,7 @@ describe("PurchaseDialog", () => {
   });
 
   it("disables purchase and explains insufficient USDC", () => {
-    mocks.useSepoliaPurchase.mockReturnValue(
+    mocks.usePurchase.mockReturnValue(
       purchaseState({
         hasSufficientBalance: false,
         canPurchase: false,
@@ -105,15 +105,12 @@ describe("PurchaseDialog", () => {
 
   it.each([
     ["quoting", "Fetching exact-input quote…"],
-    ["approving-erc20", "Approving exact USDC amount for Permit2…"],
-    [
-      "approving-permit2",
-      "Approving exact Permit2 amount for Universal Router…",
-    ],
+    ["approving-erc20", "Approving USDC for Permit2 (one-time setup)…"],
+    ["signing-permit", "Sign the Permit2 authorization in your wallet…"],
     ["swapping", "Submitting swap and waiting for confirmation…"],
     ["success", "Purchase confirmed."],
   ])("renders %s state", (status, message) => {
-    mocks.useSepoliaPurchase.mockReturnValue(
+    mocks.usePurchase.mockReturnValue(
       purchaseState({
         status,
         canPurchase: status === "success",

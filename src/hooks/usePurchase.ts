@@ -6,46 +6,50 @@ import {
   useConfig,
   usePublicClient,
   useReadContract,
+  useSignTypedData,
   useWriteContract,
 } from "wagmi";
 import { readContract } from "@wagmi/core";
 import {
   type Abi,
   formatUnits,
+  maxUint256,
   parseAbi,
   type Address,
   type Hash,
+  type Hex,
 } from "viem";
 import { ammoTokenAbi } from "@/abi/ammoToken";
 import v4QuoterAbi from "@/abi/v4Quoter";
 import { UNIVERSAL_ROUTER_ABI } from "@/abi/universalRouter";
 import {
-  SEPOLIA_CONFIG,
-  SUPPORTED_CHAIN_ID,
+  DEFAULT_CHAIN_CONFIG,
+  getChainConfig,
   isSupportedChainId,
 } from "@/addresses";
 import {
   DEFAULT_SLIPPAGE_BPS,
   assertPermit2Amount,
+  buildPermit2TypedData,
   calculateMinimumOutput,
   calculatePurchaseAmounts,
   deriveV4PoolConfig,
   encodeV4ExactInputSingle,
   getPurchaseDisabledReason,
-  needsExactErc20Allowance,
-  needsExactPermit2Allowance,
+  needsErc20Allowance,
+  needsPermit2Signature,
+  type Permit2Single,
   type PurchaseStatus,
 } from "@/utils/purchaseSwap";
 
 const PERMIT2_ABI = parseAbi([
   "function allowance(address owner, address token, address spender) view returns (uint160 amount, uint48 expiration, uint48 nonce)",
-  "function approve(address token, address spender, uint160 amount, uint48 expiration)",
 ]);
 const V4_QUOTER_ABI = v4QuoterAbi as Abi;
 const PERMIT2_ALLOWANCE_SECONDS = 20 * 60;
 const SWAP_DEADLINE_SECONDS = 10 * 60;
 
-interface UseSepoliaPurchaseArgs {
+interface UsePurchaseArgs {
   subtotalInput: string;
   tokenOut: Address;
   slippageBps?: number;
@@ -64,19 +68,22 @@ function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
-export function useSepoliaPurchase({
+export function usePurchase({
   subtotalInput,
   tokenOut,
   slippageBps = DEFAULT_SLIPPAGE_BPS,
   enabled = true,
   onSuccess,
   onError,
-}: UseSepoliaPurchaseArgs) {
+}: UsePurchaseArgs) {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
+  const chainConfig = getChainConfig(chainId) ?? DEFAULT_CHAIN_CONFIG;
+  const activeChainId = chainConfig.chainId;
   const config = useConfig();
-  const publicClient = usePublicClient({ chainId: SUPPORTED_CHAIN_ID });
+  const publicClient = usePublicClient({ chainId: activeChainId });
   const { writeContractAsync } = useWriteContract();
+  const { signTypedDataAsync } = useSignTypedData();
   const [operation, setOperation] = useState<OperationState>({
     status: "idle",
     error: null,
@@ -88,34 +95,31 @@ export function useSepoliaPurchase({
       return {
         amounts: calculatePurchaseAmounts(
           subtotalInput,
-          SEPOLIA_CONFIG.decimals.usdc
+          chainConfig.decimals.usdc
         ),
         error: null,
       };
     } catch (error) {
       return {
-        amounts: calculatePurchaseAmounts(
-          "",
-          SEPOLIA_CONFIG.decimals.usdc
-        ),
+        amounts: calculatePurchaseAmounts("", chainConfig.decimals.usdc),
         error: toError(error),
       };
     }
-  }, [subtotalInput]);
+  }, [subtotalInput, chainConfig]);
 
   const pool = useMemo(
     () =>
       deriveV4PoolConfig({
-        chainId: SUPPORTED_CHAIN_ID,
-        tokenIn: SEPOLIA_CONFIG.contracts.usdc,
+        chainId: activeChainId,
+        tokenIn: chainConfig.contracts.usdc,
         tokenOut,
-        tokenInDecimals: SEPOLIA_CONFIG.decimals.usdc,
-        tokenOutDecimals: SEPOLIA_CONFIG.decimals.ammoToken,
-        fee: SEPOLIA_CONFIG.pool.fee,
-        tickSpacing: SEPOLIA_CONFIG.pool.tickSpacing,
-        hooks: SEPOLIA_CONFIG.pool.hooks,
+        tokenInDecimals: chainConfig.decimals.usdc,
+        tokenOutDecimals: chainConfig.decimals.ammoToken,
+        fee: chainConfig.pool.fee,
+        tickSpacing: chainConfig.pool.tickSpacing,
+        hooks: chainConfig.pool.hooks,
       }),
-    [tokenOut]
+    [activeChainId, chainConfig, tokenOut]
   );
 
   const quoteEnabled =
@@ -130,11 +134,11 @@ export function useSepoliaPurchase({
     hookData: "0x" as const,
   };
   const quoteQuery = useReadContract({
-    address: SEPOLIA_CONFIG.contracts.v4Quoter,
+    address: chainConfig.contracts.v4Quoter,
     abi: V4_QUOTER_ABI,
     functionName: "quoteExactInputSingle",
     args: [quoteParams],
-    chainId: SUPPORTED_CHAIN_ID,
+    chainId: activeChainId,
     query: {
       enabled: quoteEnabled,
       retry: false,
@@ -145,14 +149,14 @@ export function useSepoliaPurchase({
 
   const usdcBalanceQuery = useBalance({
     address,
-    token: SEPOLIA_CONFIG.contracts.usdc,
-    chainId: SUPPORTED_CHAIN_ID,
+    token: chainConfig.contracts.usdc,
+    chainId: activeChainId,
     query: { enabled: isConnected && isSupportedChainId(chainId) },
   });
   const outputBalanceQuery = useBalance({
     address,
     token: tokenOut,
-    chainId: SUPPORTED_CHAIN_ID,
+    chainId: activeChainId,
     query: { enabled: isConnected && isSupportedChainId(chainId) },
   });
   const usdcBalance = usdcBalanceQuery.data?.value ?? 0n;
@@ -162,7 +166,7 @@ export function useSepoliaPurchase({
 
   const isTransactionPending =
     operation.status === "approving-erc20" ||
-    operation.status === "approving-permit2" ||
+    operation.status === "signing-permit" ||
     operation.status === "swapping";
   const quoteError =
     calculation.error ??
@@ -194,7 +198,7 @@ export function useSepoliaPurchase({
       // amount input can change mid-approval and the tx is still on-chain.
       if (
         prev.status === "approving-erc20" ||
-        prev.status === "approving-permit2" ||
+        prev.status === "signing-permit" ||
         prev.status === "swapping"
       ) {
         return prev;
@@ -206,7 +210,7 @@ export function useSepoliaPurchase({
   const waitForSuccess = useCallback(
     async (hash: Hash) => {
       if (!publicClient) {
-        throw new Error("Sepolia public client is unavailable.");
+        throw new Error("Network connection is unavailable.");
       }
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") {
@@ -222,10 +226,10 @@ export function useSepoliaPurchase({
         throw new Error("Connect a wallet before purchasing.");
       }
       if (!isSupportedChainId(chainId)) {
-        throw new Error("Purchase supports Sepolia only.");
+        throw new Error("Purchase is not supported on this network.");
       }
       if (!publicClient) {
-        throw new Error("Sepolia public client is unavailable.");
+        throw new Error("Network connection is unavailable.");
       }
       if (calculation.error || calculation.amounts.totalAmount <= 0n) {
         throw calculation.error ?? new Error("Enter a purchase amount.");
@@ -253,15 +257,18 @@ export function useSepoliaPurchase({
         slippageBps
       );
 
+      // One-time max approval: Permit2 gates actual spending per-swap via
+      // short-lived signed permits, so an unbounded ERC20 allowance to
+      // Permit2 itself is the standard Uniswap pattern.
       const erc20Allowance = await readContract(config, {
-        address: SEPOLIA_CONFIG.contracts.usdc,
+        address: chainConfig.contracts.usdc,
         abi: ammoTokenAbi,
         functionName: "allowance",
-        args: [address, SEPOLIA_CONFIG.contracts.permit2],
-        chainId: SUPPORTED_CHAIN_ID,
+        args: [address, chainConfig.contracts.permit2],
+        chainId: activeChainId,
       });
       if (
-        needsExactErc20Allowance(
+        needsErc20Allowance(
           erc20Allowance,
           calculation.amounts.totalAmount
         )
@@ -272,34 +279,32 @@ export function useSepoliaPurchase({
           txHash: null,
         });
         const approvalHash = await writeContractAsync({
-          address: SEPOLIA_CONFIG.contracts.usdc,
+          address: chainConfig.contracts.usdc,
           abi: ammoTokenAbi,
           functionName: "approve",
-          args: [
-            SEPOLIA_CONFIG.contracts.permit2,
-            calculation.amounts.totalAmount,
-          ],
+          args: [chainConfig.contracts.permit2, maxUint256],
           account: address,
-          chainId: SUPPORTED_CHAIN_ID,
+          chainId: activeChainId,
         });
         await waitForSuccess(approvalHash);
       }
 
       const now = Math.floor(Date.now() / 1_000);
-      const permit2Expiration = now + PERMIT2_ALLOWANCE_SECONDS;
-      const [permit2Allowance, currentExpiration] = await readContract(config, {
-        address: SEPOLIA_CONFIG.contracts.permit2,
-        abi: PERMIT2_ABI,
-        functionName: "allowance",
-        args: [
-          address,
-          SEPOLIA_CONFIG.contracts.usdc,
-          SEPOLIA_CONFIG.contracts.universalRouter,
-        ],
-        chainId: SUPPORTED_CHAIN_ID,
-      });
+      const [permit2Allowance, currentExpiration, permit2Nonce] =
+        await readContract(config, {
+          address: chainConfig.contracts.permit2,
+          abi: PERMIT2_ABI,
+          functionName: "allowance",
+          args: [
+            address,
+            chainConfig.contracts.usdc,
+            chainConfig.contracts.universalRouter,
+          ],
+          chainId: activeChainId,
+        });
+      let permit: { permitSingle: Permit2Single; signature: Hex } | undefined;
       if (
-        needsExactPermit2Allowance({
+        needsPermit2Signature({
           currentAllowance: permit2Allowance,
           currentExpiration: Number(currentExpiration),
           requiredAmount: calculation.amounts.totalAmount,
@@ -307,34 +312,39 @@ export function useSepoliaPurchase({
         })
       ) {
         setOperation({
-          status: "approving-permit2",
+          status: "signing-permit",
           error: null,
           txHash: null,
         });
-        const permit2Hash = await writeContractAsync({
-          address: SEPOLIA_CONFIG.contracts.permit2,
-          abi: PERMIT2_ABI,
-          functionName: "approve",
-          args: [
-            SEPOLIA_CONFIG.contracts.usdc,
-            SEPOLIA_CONFIG.contracts.universalRouter,
-            calculation.amounts.totalAmount,
-            permit2Expiration,
-          ],
-          account: address,
-          chainId: SUPPORTED_CHAIN_ID,
-        });
-        await waitForSuccess(permit2Hash);
+        const permitSingle: Permit2Single = {
+          details: {
+            token: chainConfig.contracts.usdc,
+            amount: calculation.amounts.totalAmount,
+            expiration: now + PERMIT2_ALLOWANCE_SECONDS,
+            nonce: Number(permit2Nonce),
+          },
+          spender: chainConfig.contracts.universalRouter,
+          sigDeadline: BigInt(now + SWAP_DEADLINE_SECONDS),
+        };
+        const signature = await signTypedDataAsync(
+          buildPermit2TypedData({
+            chainId: activeChainId,
+            permit2: chainConfig.contracts.permit2,
+            permit: permitSingle,
+          })
+        );
+        permit = { permitSingle, signature };
       }
 
       const encodedSwap = encodeV4ExactInputSingle({
         pool,
         amountIn: calculation.amounts.totalAmount,
         amountOutMinimum: minimumOutput,
+        permit,
       });
       setOperation({ status: "swapping", error: null, txHash: null });
       const swapHash = await writeContractAsync({
-        address: SEPOLIA_CONFIG.contracts.universalRouter,
+        address: chainConfig.contracts.universalRouter,
         abi: UNIVERSAL_ROUTER_ABI,
         functionName: "execute",
         args: [
@@ -343,7 +353,7 @@ export function useSepoliaPurchase({
           BigInt(now + SWAP_DEADLINE_SECONDS),
         ],
         account: address,
-        chainId: SUPPORTED_CHAIN_ID,
+        chainId: activeChainId,
       });
       await waitForSuccess(swapHash);
 
@@ -365,8 +375,10 @@ export function useSepoliaPurchase({
       throw purchaseError;
     }
   }, [
+    activeChainId,
     address,
     calculation,
+    chainConfig,
     chainId,
     config,
     isConnected,
@@ -376,6 +388,7 @@ export function useSepoliaPurchase({
     pool,
     publicClient,
     quoteQuery,
+    signTypedDataAsync,
     slippageBps,
     usdcBalanceQuery,
     waitForSuccess,
@@ -390,11 +403,11 @@ export function useSepoliaPurchase({
     quoteFormatted:
       quote === null
         ? null
-        : formatUnits(quote, SEPOLIA_CONFIG.decimals.ammoToken),
+        : formatUnits(quote, chainConfig.decimals.ammoToken),
     usdcBalance,
     usdcBalanceFormatted: formatUnits(
       usdcBalance,
-      SEPOLIA_CONFIG.decimals.usdc
+      chainConfig.decimals.usdc
     ),
     hasSufficientBalance,
     status,

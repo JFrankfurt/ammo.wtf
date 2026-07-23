@@ -1,5 +1,5 @@
 import ammoFactory from "@/abi/ammoFactory";
-import { requireChainConfig } from "@/addresses";
+import { requireChainContract } from "@/addresses";
 import { Button } from "@/components/Button";
 import { FormInput } from "@/components/FormInput";
 import { TransactionStatus } from "@/components/TransactionStatus";
@@ -23,10 +23,11 @@ export function MintNewTokenType({ onBack }: { onBack: () => void }) {
     let parsedSupply: bigint;
 
     try {
-      factoryAddress = requireChainConfig(
+      factoryAddress = requireChainContract(
         chainId,
+        "ammoFactory",
         "Admin token creation"
-      ).contracts.ammoFactory;
+      );
       if (!tokenName.trim() || !tokenSymbol.trim()) {
         throw new Error("Enter a token name and symbol.");
       }

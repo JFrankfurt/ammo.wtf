@@ -1,5 +1,5 @@
 import ammoFactoryAbi from "@/abi/ammoFactory";
-import { getChainConfig, requireChainConfig } from "@/addresses";
+import { getChainConfig, requireChainContract } from "@/addresses";
 import { Button } from "@/components/Button";
 import { FormInput } from "@/components/FormInput";
 import { TransactionStatus } from "@/components/TransactionStatus";
@@ -22,7 +22,7 @@ export function SetFeeDetails({ onBack }: { onBack: () => void }) {
     address: chainConfig?.contracts.ammoFactory,
     abi: ammoFactoryAbi,
     functionName: "getFeeDetails",
-    query: { enabled: Boolean(chainConfig) },
+    query: { enabled: Boolean(chainConfig?.contracts.ammoFactory) },
   });
 
   useEffect(() => {
@@ -42,10 +42,11 @@ export function SetFeeDetails({ onBack }: { onBack: () => void }) {
     let parsedFee: bigint;
 
     try {
-      factoryAddress = requireChainConfig(
+      factoryAddress = requireChainContract(
         chainId,
+        "ammoFactory",
         "Admin fee updates"
-      ).contracts.ammoFactory;
+      );
       if (!isAddress(recipientAddress)) {
         throw new Error("Enter a valid fee recipient address.");
       }

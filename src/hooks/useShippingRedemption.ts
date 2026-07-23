@@ -9,8 +9,8 @@ import type { Address, Hash } from "viem";
 import { ammoBatchRedeemerAbi } from "@/abi/ammoBatchRedeemer";
 import { ammoTokenAbi } from "@/abi/ammoToken";
 import {
-  SEPOLIA_CONFIG,
-  SUPPORTED_CHAIN_ID,
+  DEFAULT_CHAIN_ID,
+  getChainConfig,
   isSupportedChainId,
 } from "@/addresses";
 import { encryptShippingPayload } from "@/data/shipping-encryption";
@@ -74,21 +74,24 @@ function safeOperationError(
 
 export function useShippingRedemption() {
   const { address: account, chainId, isConnected } = useAccount();
-  const publicClient = usePublicClient({ chainId: SUPPORTED_CHAIN_ID });
+  const chainConfig = getChainConfig(chainId);
+  const publicClient = usePublicClient({
+    chainId: chainConfig?.chainId ?? DEFAULT_CHAIN_ID,
+  });
   const { signTypedDataAsync } = useSignTypedData();
   const { writeContractAsync } = useWriteContract();
   const [operation, setOperation] = useState<OperationState>(INITIAL_STATE);
 
   const redeemerAddress: Address | undefined =
-    SEPOLIA_CONFIG.contracts.ammoBatchRedeemer;
+    chainConfig?.contracts.ammoBatchRedeemer;
   const disabledReason = !isConnected
     ? "Connect a wallet to ship ammunition."
     : !isSupportedChainId(chainId)
-      ? "Shipping supports Sepolia only."
+      ? "Shipping is not supported on this network."
       : !redeemerAddress
         ? "Shipping is unavailable until the batch redeemer is deployed."
         : !publicClient
-          ? "Sepolia connection is unavailable."
+          ? "Network connection is unavailable."
           : null;
 
   const reset = useCallback(() => setOperation(INITIAL_STATE), []);
@@ -101,8 +104,8 @@ export function useShippingRedemption() {
       if (!account || !isConnected) {
         throw new Error("Connect a wallet to ship ammunition.");
       }
-      if (!isSupportedChainId(chainId)) {
-        throw new Error("Shipping supports Sepolia only.");
+      if (!isSupportedChainId(chainId) || !chainConfig) {
+        throw new Error("Shipping is not supported on this network.");
       }
       if (!redeemerAddress) {
         throw new Error(
@@ -110,7 +113,7 @@ export function useShippingRedemption() {
         );
       }
       if (!publicClient) {
-        throw new Error("Sepolia connection is unavailable.");
+        throw new Error("Network connection is unavailable.");
       }
 
       let activeStatus: ShippingRedemptionStatus = "encrypting";
@@ -170,7 +173,7 @@ export function useShippingRedemption() {
           }));
           const signature = await signTypedDataAsync(
             createPermitTypedData({
-              chainId: SUPPORTED_CHAIN_ID,
+              chainId: chainConfig.chainId,
               token: permitInput.item.token,
               tokenName: permitInput.tokenName,
               owner: account,
@@ -202,7 +205,7 @@ export function useShippingRedemption() {
           abi: ammoBatchRedeemerAbi,
           functionName: "redeem",
           args: [signedItems, encryptedPayload],
-          chainId: SUPPORTED_CHAIN_ID,
+          chainId: chainConfig.chainId,
         });
 
         activeStatus = "confirming";
@@ -232,6 +235,7 @@ export function useShippingRedemption() {
     },
     [
       account,
+      chainConfig,
       chainId,
       isConnected,
       publicClient,

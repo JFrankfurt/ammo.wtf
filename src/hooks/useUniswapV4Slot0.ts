@@ -4,11 +4,7 @@ import { useMemo } from "react";
 import { getAddress } from "viem";
 import { useChainId, useReadContract } from "wagmi";
 import UNISWAP_V4_STATE_VIEW_ABI from "../abi/uniswapV4StateView";
-import {
-  getChainConfig,
-  SEPOLIA_CONFIG,
-  SUPPORTED_CHAIN_ID,
-} from "../addresses";
+import { DEFAULT_CHAIN_CONFIG, getChainConfig } from "../addresses";
 
 export interface TokenPriceResult {
   isLoading: boolean;
@@ -17,7 +13,7 @@ export interface TokenPriceResult {
 }
 
 /**
- * Fetches a token's Uniswap v4 pool state against configured Sepolia USDC.
+ * Fetches a token's Uniswap v4 pool state against the configured chain USDC.
  */
 export function useUniswapV4Slot0(
   tokenAddress: string,
@@ -25,12 +21,12 @@ export function useUniswapV4Slot0(
 ): TokenPriceResult {
   const chainId = useChainId();
   const chainConfig = getChainConfig(chainId);
-  const sdkChainId = chainConfig?.chainId ?? SUPPORTED_CHAIN_ID;
+  const sdkChainId = chainConfig?.chainId ?? DEFAULT_CHAIN_CONFIG.chainId;
   const tokenUSDC = useMemo(() => {
     return new Token(
       sdkChainId,
-      chainConfig?.contracts.usdc ?? SEPOLIA_CONFIG.contracts.usdc,
-      chainConfig?.decimals.usdc ?? SEPOLIA_CONFIG.decimals.usdc,
+      chainConfig?.contracts.usdc ?? DEFAULT_CHAIN_CONFIG.contracts.usdc,
+      chainConfig?.decimals.usdc ?? DEFAULT_CHAIN_CONFIG.decimals.usdc,
       "USDC",
       "USD Coin"
     );
@@ -51,7 +47,7 @@ export function useUniswapV4Slot0(
     ? [token, tokenUSDC]
     : [tokenUSDC, token];
   const { fee, tickSpacing, hooks } =
-    chainConfig?.pool ?? SEPOLIA_CONFIG.pool;
+    chainConfig?.pool ?? DEFAULT_CHAIN_CONFIG.pool;
   const poolId = Pool.getPoolId(
     token0,
     token1,
